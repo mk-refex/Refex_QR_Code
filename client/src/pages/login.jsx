@@ -8,7 +8,7 @@ export default function LoginPage() {
   return (
     <>
       <Helmet>
-        <title> Login | Refex Group </title>
+        <title> Login | Refex QR Code </title>
       </Helmet>
 
       <LoginView />

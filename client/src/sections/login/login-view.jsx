@@ -174,7 +174,7 @@ export default function LoginView() {
           }}
         >
           <Typography variant="h4" component="div" my={3}>
-            Login to Refex QR-Codes
+            Login to Refex QR Code
           </Typography>
 
           {renderForm}

@@ -60,7 +60,18 @@ export default function Router() {
         />
       ),
       children: [
-        { element: <Navigate to="/employees" />, index: true },
+        { element: <Navigate to="/qr_code" />, index: true },
+        {
+          path: 'qr_code',
+          children: [
+            { element: <Navigate to="/qr_code/fixed_url" />, index: true },
+            { path: 'fixed_url', element: <EmployeeListPage /> },
+            { path: 'dynamic_url', element: <EmployeeCreatePage /> },
+            { path: 'upload_file', element: <EmployeeListPage /> },
+            { path: 'smart_link', element: <EmployeeCreatePage /> },
+            { path: 'custom_qr', element: <EmployeeCreatePage /> },
+          ],
+        },
         {
           path: 'employees',
           children: [

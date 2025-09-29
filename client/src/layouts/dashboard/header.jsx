@@ -23,7 +23,11 @@ import AccountPopover from './common/account-popover';
 // import LanguagePopover from './common/language-popover';
 
 const Pages = [
-  { title: 'Brochure Distribution List', path: '/brochure_distribution_list' },
+  { title: 'Fixed URL', path: '/qr_code/fixed_url' },
+  { title: 'Dynamic URL', path: '/qr_code/dynamic_url' },
+  { title: 'Upload File', path: '/qr_code/upload_file' },
+  { title: 'Smart Link', path: '/qr_code/smart_link' },
+  { title: 'Custom QR', path: '/qr_code/custom_qr' },
   // { title: 'Employees', path: '/employees' },
   // { title: 'Print Requests', path: '/print_requests'},
 ];
@@ -37,7 +41,7 @@ export default function Header({ onOpenNav }) {
 
   const renderContent = (
     <>
-      <Logo sx={{ height: 35 }} />
+      <Logo sx={{ mt: -1.25 }} />
 
       <Stack direction="row" alignItems="center" mx={3}>
         {Pages.map((page, index) => {
@@ -52,17 +56,20 @@ export default function Header({ onOpenNav }) {
                 minHeight: 44,
                 borderRadius: 0.75,
                 typography: 'h6',
-                color: 'text.secondary',
+                color: '#2879b6',
                 textTransform: 'capitalize',
                 fontWeight: 'fontWeightMedium',
                 ...(active && {
-                  color: 'primary.dark',
+                  color: '#F4553B',
                   fontWeight: 'fontWeightSemiBold',
                   // bgcolor: alpha(theme.palette.primary.main, 0.08),
                   '&:hover': {
                     bgcolor: alpha(theme.palette.primary.main, 0.16),
                   },
                 }),
+                '&:hover': {
+                  color: '#F4553B',
+                },
               }}
             >
               <Box component="span">
