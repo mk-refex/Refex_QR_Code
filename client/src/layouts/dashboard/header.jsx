@@ -23,13 +23,8 @@ import AccountPopover from './common/account-popover';
 // import LanguagePopover from './common/language-popover';
 
 const Pages = [
-  { title: 'Fixed URL', path: '/qr_code/fixed_url' },
-  { title: 'Dynamic URL', path: '/qr_code/dynamic_url' },
-  { title: 'Upload File', path: '/qr_code/upload_file' },
-  { title: 'Smart Link', path: '/qr_code/smart_link' },
-  { title: 'Custom QR', path: '/qr_code/custom_qr' },
-  // { title: 'Employees', path: '/employees' },
-  // { title: 'Print Requests', path: '/print_requests'},
+  { title: 'Assets List', path: '/assets/list' },
+  { title: 'Assets API Access', path: '/assets/api-access' },
 ];
 
 // ----------------------------------------------------------------------

@@ -59,7 +59,7 @@ export default function LoginView() {
             login(response.data.token, response.data.user_data);
             setLoginStatusMessage(response.data.message);
             setLoading(false);
-            router.push('/employees');
+            router.push('/assets/list');
           }
         })
         .catch((error) => {

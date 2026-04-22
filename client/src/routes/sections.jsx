@@ -15,6 +15,11 @@ export const EmployeeListPage = lazy(() => import('src/pages/employee-list'));
 export const EmployeeCreatePage = lazy(() => import('src/pages/employee-create'));
 export const EmployeeViewPage = lazy(() => import('src/pages/employee-view'));
 export const EmployeeEditPage = lazy(() => import('src/pages/employee-edit'));
+export const AssetsListPage = lazy(() => import('src/pages/assets-list'));
+export const AssetsCreatePage = lazy(() => import('src/pages/assets-create'));
+export const AssetsEditPage = lazy(() => import('src/pages/assets-edit'));
+export const AssetsApiAccessPage = lazy(() => import('src/pages/assets-api-access'));
+export const AssetPublicPage = lazy(() => import('src/pages/asset-public'));
 export const UserPage = lazy(() => import('src/pages/user'));
 export const LoginPage = lazy(() => import('src/pages/login'));
 export const ForgotPasswordPage = lazy(() => import('src/pages/forgot-password'));
@@ -60,7 +65,17 @@ export default function Router() {
         />
       ),
       children: [
-        { element: <Navigate to="/qr_code" />, index: true },
+        { element: <Navigate to="/assets/list" />, index: true },
+        {
+          path: 'assets',
+          children: [
+            { element: <Navigate to="/assets/list" />, index: true },
+            { path: 'list', element: <AssetsListPage /> },
+            { path: 'api-access', element: <AssetsApiAccessPage /> },
+            { path: 'create', element: <AssetsCreatePage /> },
+            { path: 'edit/:assetId', element: <AssetsEditPage /> },
+          ],
+        },
         {
           path: 'qr_code',
           children: [
@@ -90,7 +105,11 @@ export default function Router() {
     },
     {
       path: 'login',
-      element: isAuthenticated ? <Navigate to="/employees" replace /> : <LoginPage />,
+      element: isAuthenticated ? <Navigate to="/assets/list" replace /> : <LoginPage />,
+    },
+    {
+      path: 'asset/:assetId',
+      element: <AssetPublicPage />,
     },
     {
       path: 'airport',
