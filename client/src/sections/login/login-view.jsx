@@ -1,10 +1,13 @@
 import axios from 'axios';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
@@ -16,6 +19,7 @@ import { useRouter } from 'src/routes/hooks';
 
 import { bgGradient } from 'src/theme/css';
 import { useAuth } from 'src/context/AuthContext';
+import { getDefaultRoute } from 'src/utils/roles';
 import Footer from 'src/layouts/dashboard/footer';
 
 import Logo from 'src/components/logo';
@@ -23,11 +27,21 @@ import Iconify from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
 
+const SSO_ERROR_MESSAGES = {
+  no_code: 'SSO did not return an authorization code. Try again.',
+  not_configured: 'SSO is not configured. Contact admin.',
+  token_failed: 'SSO sign-in failed (token). Try again.',
+  profile_failed: 'Could not load your SSO profile.',
+  no_email: 'Your SSO account has no email.',
+  user_not_found: 'Your email is not registered or account is inactive. Contact admin.',
+  login_failed: 'SSO sign-in failed. Try again.',
+};
+
 export default function LoginView() {
   const theme = useTheme();
-
   const router = useRouter();
   const { login } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,6 +49,30 @@ export default function LoginView() {
   const [loginStatus, setLoginStatus] = useState(false);
   const [loginStatusMessage, setLoginStatusMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [ssoProviders, setSsoProviders] = useState([]);
+
+  useEffect(() => {
+    axios
+      .get('/auth/sso-providers')
+      .then((res) => setSsoProviders(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setSsoProviders([]));
+  }, []);
+
+  useEffect(() => {
+    const err = searchParams.get('error');
+    if (err && SSO_ERROR_MESSAGES[err]) {
+      setLoginStatus(false);
+      setLoginStatusMessage(SSO_ERROR_MESSAGES[err]);
+      setSearchParams(
+        (params) => {
+          const next = new URLSearchParams(params);
+          next.delete('error');
+          return next;
+        },
+        { replace: true }
+      );
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -49,26 +87,21 @@ export default function LoginView() {
       axios
         .post(`/auth/login`, { email, password })
         .then((response) => {
-          // console.log(response);
           setLoginStatus(response.data.status);
           if (response.data.status) {
-            // const sessionData ={
-            //     token:response.data.token,
-            //     userData:response.data.user_data,
-            // }
             login(response.data.token, response.data.user_data);
             setLoginStatusMessage(response.data.message);
             setLoading(false);
-            router.push('/assets/list');
+            router.push(getDefaultRoute(response.data.user_data));
           }
         })
         .catch((error) => {
           console.error('Login error:', error);
           setTimeout(() => {
-            if (error.response.data.status_code === 400) {
+            if (error.response?.data?.status_code === 400) {
               setLoginStatusMessage(error.response.data.results.errors[0].msg);
             } else {
-              setLoginStatusMessage(error.response.data.message);
+              setLoginStatusMessage(error.response?.data?.message);
             }
             setLoading(false);
           }, 1000);
@@ -132,12 +165,53 @@ export default function LoginView() {
         variant="contained"
         sx={{ mb: 1 }}
       >
-        Login
+        Log in
       </LoadingButton>
+
+      {ssoProviders.length > 0 && (
+        <>
+          <Divider sx={{ my: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Or sign in with
+            </Typography>
+          </Divider>
+          <Stack spacing={1.5}>
+            {ssoProviders.map((provider) => {
+              const iconUrl = provider.iconUrl?.trim() || '';
+              return (
+                <Button
+                  key={provider.provider}
+                  fullWidth
+                  variant="outlined"
+                  size="large"
+                  aria-label={provider.displayName?.trim() || provider.provider}
+                  href={`/auth/sso/${encodeURIComponent(provider.provider)}?state=${encodeURIComponent(window.location.origin)}`}
+                  sx={{
+                    justifyContent: 'center',
+                    py: 1.25,
+                    minHeight: 52,
+                  }}
+                >
+                  {iconUrl ? (
+                    <Box
+                      component="img"
+                      src={iconUrl}
+                      alt={provider.displayName?.trim() || provider.provider}
+                      sx={{ width: 120, height: 24, objectFit: 'contain' }}
+                    />
+                  ) : (
+                    <Iconify icon="eva:shield-outline" width={24} />
+                  )}
+                </Button>
+              );
+            })}
+          </Stack>
+        </>
+      )}
 
       <Typography
         variant="body2"
-        sx={{ fontWeight: 600 }}
+        sx={{ fontWeight: 600, mt: 2 }}
         color={loginStatus ? 'text.success' : 'error'}
         align="center"
       >
@@ -174,7 +248,7 @@ export default function LoginView() {
           }}
         >
           <Typography variant="h4" component="div" my={3}>
-            Login to Refex QR Code
+            Log in to Refex QR Code
           </Typography>
 
           {renderForm}

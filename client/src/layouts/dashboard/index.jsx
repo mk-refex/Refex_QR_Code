@@ -1,43 +1,26 @@
 import PropTypes from 'prop-types';
 
-import Box from '@mui/material/Box';
+import { useAuth } from 'src/context/AuthContext';
+import { isAdmin } from 'src/utils/roles';
 
-// import Nav from './nav';
-import Main from './main';
-import Header from './header';
-import Footer from './footer';
-// import { QRCode } from 'react-qrcode-logo';
-// import { Stack } from '@mui/material';
+import AdminLayout from './admin-layout';
+import UserLayout from './user-layout';
 
 // ----------------------------------------------------------------------
 
 export default function DashboardLayout({ children }) {
-  // const [openNav, setOpenNav] = useState(false);
+  const { user } = useAuth();
 
-  return (
-    <>
-      {/* <Header onOpenNav={() => setOpenNav(true)} /> */}
-      <Header />
+  if (isAdmin(user)) {
+    return <AdminLayout>{children}</AdminLayout>;
+  }
 
-      <Box
-        sx={{
-          minHeight: 1,
-          display: 'flex',
-          flexDirection: { xs: 'column', lg: 'row' },
-        }}
-      >
-        {/* <Nav openNav={openNav} onCloseNav={() => setOpenNav(false)} /> */}
-
-        <Main>{children}</Main>
-      </Box>
-      {/* <Stack flexDirection='column' justifyContent='center' alignItems='center'>
-      <QRCode value='https://contact.refex.group/empvcard/2055' logoImage='/assets/Refex-Logo.png' logoWidth={72} logoHeight={22} size={200} qrStyle='dots' eyeRadius={10} removeQrCodeBehindLogo logoPadding={1}/>
-      </Stack> */}
-      <Footer />
-    </>
-  );
+  return <UserLayout>{children}</UserLayout>;
 }
 
 DashboardLayout.propTypes = {
   children: PropTypes.node,
 };
+
+export { default as AdminLayout } from './admin-layout';
+export { default as UserLayout } from './user-layout';

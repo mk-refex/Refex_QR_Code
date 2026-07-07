@@ -7,6 +7,7 @@ const assetsIntegrationController = require("../controllers/integrations/assets"
 router.get(
   "/integrations/assets/token",
   auth.authCheck,
+  auth.authAdmin,
   assetsIntegrationController.issueAssetsApiToken
 );
 

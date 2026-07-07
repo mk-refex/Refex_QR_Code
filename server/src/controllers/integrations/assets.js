@@ -18,8 +18,13 @@ function normalizeDateOnly(value) {
   }
   const raw = String(value).trim();
   if (!raw) return null;
-  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (iso) return raw;
+  const iso = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) {
+    const yyyy = iso[1];
+    const mm = String(iso[2]).padStart(2, "0");
+    const dd = String(iso[3]).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
   const dmy = raw.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
   if (dmy) {
     const dd = String(dmy[1]).padStart(2, "0");

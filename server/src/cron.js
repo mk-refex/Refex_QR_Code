@@ -1,7 +1,6 @@
 const cron = require("node-cron");
 const reportService = require("./services/reportService");
 
-// Schedule the job to run daily at 10 AM
 const setupCronJobs = () => {
   cron.schedule(
     "0 10 * * *",
@@ -15,11 +14,11 @@ const setupCronJobs = () => {
     },
     {
       scheduled: true,
-      timezone: "Asia/Kolkata", // Adjust to your timezone
+      timezone: "Asia/Kolkata",
     }
   );
 
-  console.log("Cron jobs scheduled");
+  console.log("Contest report cron job scheduled");
 };
 
 module.exports = setupCronJobs;

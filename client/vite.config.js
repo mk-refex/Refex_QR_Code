@@ -41,6 +41,18 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
+      '/qr/d': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/qr/s': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/qr/f': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
     },
   },
   preview: {

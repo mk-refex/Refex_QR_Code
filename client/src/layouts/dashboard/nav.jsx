@@ -3,186 +3,209 @@ import PropTypes from 'prop-types';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import Drawer from '@mui/material/Drawer';
 import Button from '@mui/material/Button';
+import Drawer from '@mui/material/Drawer';
 import Avatar from '@mui/material/Avatar';
-import { alpha } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
+import { alpha, useTheme } from '@mui/material/styles';
 import ListItemButton from '@mui/material/ListItemButton';
 
-import { usePathname } from 'src/routes/hooks';
+import { useRouter, usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
 import { useResponsive } from 'src/hooks/use-responsive';
+import { useAuth } from 'src/context/AuthContext';
 
-import { account } from 'src/_mock/account';
-
-import Logo from 'src/components/logo';
+import Iconify from 'src/components/iconify';
 import Scrollbar from 'src/components/scrollbar';
 
 import { NAV } from './config-layout';
-import navConfig from './config-navigation';
+import { adminSidebarNav, getSectionFromPath } from './config-navigation';
 
 // ----------------------------------------------------------------------
 
-export default function Nav({ openNav, onCloseNav }) {
-  const pathname = usePathname();
+function NavAccount() {
+  const router = useRouter();
+  const { user } = useAuth();
 
-  const upLg = useResponsive('up', 'lg');
+  if (!user) {
+    return null;
+  }
 
-  useEffect(() => {
-    if (openNav) {
-      onCloseNav();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
-
-  const renderAccount = (
-    <Box
-      sx={{
-        my: 3,
-        mx: 2.5,
-        py: 2,
-        px: 2.5,
-        display: 'flex',
-        borderRadius: 1.5,
-        alignItems: 'center',
-        bgcolor: (theme) => alpha(theme.palette.grey[500], 0.12),
-      }}
-    >
-      <Avatar src={account.photoURL} alt="photoURL" />
-
-      <Box sx={{ ml: 2 }}>
-        <Typography variant="subtitle2">{account.displayName}</Typography>
-
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          {account.role}
-        </Typography>
-      </Box>
-    </Box>
-  );
-
-  const renderMenu = (
-    <Stack component="nav" spacing={0.5} sx={{ px: 2 }}>
-      {navConfig.map((item) => (
-        <NavItem key={item.title} item={item} />
-      ))}
-    </Stack>
-  );
-
-  const renderUpgrade = (
-    <Box sx={{ px: 2.5, pb: 3, mt: 10 }}>
-      <Stack alignItems="center" spacing={3} sx={{ pt: 5, borderRadius: 2, position: 'relative' }}>
-        <Box
-          component="img"
-          src="/assets/illustrations/illustration_avatar.png"
-          sx={{ width: 100, position: 'absolute', top: -50 }}
-        />
-
-        <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="h6">Get more?</Typography>
-
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
-            From only $69
-          </Typography>
-        </Box>
-
-        <Button
-          href="https://material-ui.com/store/items/minimal-dashboard/"
-          target="_blank"
-          variant="contained"
-          color="inherit"
-        >
-          Upgrade to Pro
-        </Button>
-      </Stack>
-    </Box>
-  );
-
-  const renderContent = (
-    <Scrollbar
-      sx={{
-        height: 1,
-        '& .simplebar-content': {
-          height: 1,
-          display: 'flex',
-          flexDirection: 'column',
-        },
-      }}
-    >
-      <Logo sx={{ mt: 3, ml: 4 }} />
-
-      {renderAccount}
-
-      {renderMenu}
-
-      <Box sx={{ flexGrow: 1 }} />
-
-      {renderUpgrade}
-    </Scrollbar>
-  );
+  const initials = `${user.first_name?.charAt(0)?.toUpperCase() || ''}${user.last_name?.charAt(0)?.toUpperCase() || ''}`;
 
   return (
     <Box
       sx={{
-        flexShrink: { lg: 0 },
-        width: { lg: NAV.WIDTH },
+        flexShrink: 0,
+        px: 1.5,
+        py: 1.5,
+        borderTop: (theme) => `dashed 1px ${theme.palette.divider}`,
+        bgcolor: 'background.default',
       }}
     >
-      {upLg ? (
-        <Box
-          sx={{
-            height: 1,
-            position: 'fixed',
-            width: NAV.WIDTH,
-            borderRight: (theme) => `dashed 1px ${theme.palette.divider}`,
-          }}
-        >
-          {renderContent}
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+        <Avatar sx={{ width: 32, height: 32, fontSize: 12 }}>{initials}</Avatar>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="caption" fontWeight={600} noWrap sx={{ display: 'block', lineHeight: 1.3 }}>
+            {user.first_name} {user.last_name}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', lineHeight: 1.3 }}>
+            {user.role}
+          </Typography>
         </Box>
-      ) : (
-        <Drawer
-          open={openNav}
-          onClose={onCloseNav}
-          PaperProps={{
-            sx: {
-              width: NAV.WIDTH,
-            },
-          }}
-        >
-          {renderContent}
-        </Drawer>
-      )}
+      </Stack>
+
+      <Button
+        fullWidth
+        size="small"
+        color="error"
+        variant="outlined"
+        sx={{ py: 0.5, minHeight: 32, fontSize: 12 }}
+        startIcon={<Iconify icon="eva:log-out-outline" width={16} />}
+        onClick={() => router.push('/logout')}
+      >
+        Logout
+      </Button>
+    </Box>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+function NavMenu({ pathname }) {
+  return (
+    <Stack component="nav" spacing={0.25} sx={{ py: 1, px: 1 }}>
+      {adminSidebarNav.map((item) => (
+        <NavItem key={item.title} item={item} pathname={pathname} />
+      ))}
+    </Stack>
+  );
+}
+
+NavMenu.propTypes = {
+  pathname: PropTypes.string,
+};
+
+// ----------------------------------------------------------------------
+
+function SidebarShell({ headerHeight, pathname }) {
+  const sidebarHeight = `calc(100vh - ${headerHeight}px)`;
+
+  return (
+    <Box
+      sx={{
+        width: NAV.WIDTH,
+        height: sidebarHeight,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      <Scrollbar
+        sx={{
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
+        <NavMenu pathname={pathname} />
+      </Scrollbar>
+
+      <NavAccount />
+    </Box>
+  );
+}
+
+SidebarShell.propTypes = {
+  headerHeight: PropTypes.number,
+  pathname: PropTypes.string,
+};
+
+// ----------------------------------------------------------------------
+
+export default function Nav({ open = true, mobileOpen = false, headerHeight = 64, onCloseMobile }) {
+  const theme = useTheme();
+  const pathname = usePathname();
+  const upLg = useResponsive('up', 'lg');
+
+  useEffect(() => {
+    if (mobileOpen) {
+      onCloseMobile?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  const sidebarHeight = `calc(100vh - ${headerHeight}px)`;
+
+  if (!upLg) {
+    return (
+      <Drawer
+        open={mobileOpen}
+        onClose={onCloseMobile}
+        PaperProps={{
+          sx: {
+            width: NAV.WIDTH,
+            overflow: 'hidden',
+          },
+        }}
+      >
+        <SidebarShell headerHeight={headerHeight} pathname={pathname} />
+      </Drawer>
+    );
+  }
+
+  return (
+    <Box
+      sx={{
+        flexShrink: 0,
+        width: open ? NAV.WIDTH : 0,
+        overflow: 'hidden',
+        transition: theme.transitions.create('width', {
+          duration: theme.transitions.duration.shorter,
+        }),
+        borderRight: open ? (t) => `dashed 1px ${t.palette.divider}` : 'none',
+        bgcolor: 'background.default',
+        position: 'sticky',
+        top: `${headerHeight}px`,
+        alignSelf: 'flex-start',
+        height: sidebarHeight,
+      }}
+    >
+      <SidebarShell headerHeight={headerHeight} pathname={pathname} />
     </Box>
   );
 }
 
 Nav.propTypes = {
-  openNav: PropTypes.bool,
-  onCloseNav: PropTypes.func,
+  open: PropTypes.bool,
+  mobileOpen: PropTypes.bool,
+  headerHeight: PropTypes.number,
+  onCloseMobile: PropTypes.func,
 };
 
 // ----------------------------------------------------------------------
 
-function NavItem({ item }) {
-  const pathname = usePathname();
-
-  const active = item.path === pathname;
+function NavItem({ item, pathname }) {
+  const activeSection = getSectionFromPath(pathname);
+  const active = activeSection === item.section;
 
   return (
     <ListItemButton
       component={RouterLink}
       href={item.path}
       sx={{
-        minHeight: 44,
+        minHeight: 34,
+        py: 0.5,
+        px: 1,
         borderRadius: 0.75,
-        typography: 'body2',
+        typography: 'caption',
+        fontSize: 13,
         color: 'text.secondary',
         textTransform: 'capitalize',
-        fontWeight: 'fontWeightMedium',
+        fontWeight: 500,
         ...(active && {
           color: 'primary.main',
-          fontWeight: 'fontWeightSemiBold',
+          fontWeight: 600,
           bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
           '&:hover': {
             bgcolor: (theme) => alpha(theme.palette.primary.main, 0.16),
@@ -190,15 +213,16 @@ function NavItem({ item }) {
         }),
       }}
     >
-      <Box component="span" sx={{ width: 24, height: 24, mr: 2 }}>
+      <Box component="span" sx={{ width: 18, height: 18, mr: 1.25, display: 'flex' }}>
         {item.icon}
       </Box>
 
-      <Box component="span">{item.title} </Box>
+      <Box component="span">{item.title}</Box>
     </ListItemButton>
   );
 }
 
 NavItem.propTypes = {
   item: PropTypes.object,
+  pathname: PropTypes.string,
 };

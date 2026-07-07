@@ -13,27 +13,13 @@ import { useRouter } from 'src/routes/hooks';
 
 import { useAuth } from 'src/context/AuthContext';
 
-// ----------------------------------------------------------------------
-
-const MENU_OPTIONS = [
-  // {
-  //   label: 'Home',
-  //   icon: 'eva:home-fill',
-  // },
-  // {
-  //   label: 'Profile',
-  //   icon: 'eva:person-fill',
-  // },
-  // {
-  //   label: 'Change Password',
-  //   icon: 'eva:settings-2-fill',
-  // },
-];
+import ChangePasswordDialog from './change-password-dialog';
 
 // ----------------------------------------------------------------------
 
 export default function AccountPopover() {
   const [open, setOpen] = useState(null);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
 
@@ -94,17 +80,26 @@ export default function AccountPopover() {
           <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
             {user.email}
           </Typography>
+          {user.role && (
+            <Typography variant="caption" sx={{ color: 'text.disabled' }} noWrap>
+              {user.role}
+            </Typography>
+          )}
         </Box>
 
         <Divider sx={{ borderStyle: 'dashed' }} />
 
-        {MENU_OPTIONS.map((option) => (
-          <MenuItem key={option.label} onClick={handleClose} sx={{ typography: 'body2', py: 1.5 }}>
-            {option.label}
-          </MenuItem>
-        ))}
+        <MenuItem
+          onClick={() => {
+            handleClose();
+            setPasswordOpen(true);
+          }}
+          sx={{ typography: 'body2', py: 1.5 }}
+        >
+          Change Password
+        </MenuItem>
 
-        {/* <Divider sx={{ borderStyle: 'dashed', m: 0 }} /> */}
+        <Divider sx={{ borderStyle: 'dashed', m: 0 }} />
 
         <MenuItem
           disableRipple
@@ -115,6 +110,8 @@ export default function AccountPopover() {
           Logout
         </MenuItem>
       </Popover>
+
+      <ChangePasswordDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} />
     </>
   );
 }

@@ -40,6 +40,13 @@ app.use(
   "/api",
   require("./src/routes/assets"),
   require("./src/routes/integrations"),
+  require("./src/routes/user"),
+  require("./src/routes/administration"),
+  require("./src/routes/fixedQr"),
+  require("./src/routes/dynamicQr"),
+  require("./src/routes/smartQr"),
+  require("./src/routes/uploadFileQr"),
+  require("./src/routes/designQr"),
   require("./src/routes/contest/contestForm"),
   require("./src/routes/brochure/brochure_download")
 );
@@ -47,6 +54,13 @@ app.use(
 app.all("/api/*", (req, res) => {
   return status.ResponseStatus(res, 404, "Endpoint Not Found");
 });
+
+const dynamicQrController = require("./src/controllers/dynamicQr");
+const smartQrController = require("./src/controllers/smartQr");
+const uploadFileQrController = require("./src/controllers/uploadFileQr");
+app.get("/qr/d/:id/:slug", dynamicQrController.publicRedirect);
+app.get("/qr/s/:id/:slug", smartQrController.publicRedirect);
+app.get("/qr/f/:id/:slug", uploadFileQrController.publicServe);
 
 // Serve static files from the client build (preferred) or server/dist (fallback)
 const clientDistPath = path.join(__dirname, "..", "client", "dist");
@@ -84,10 +98,84 @@ sequelize
       // If assets table doesn't exist yet or permissions missing, skip hard-fail
       console.warn("Asset schema check skipped:", e.message);
     }
-    // Initialize cron jobs
-    // reportService.generateAndSendDailyReport();
-    // const setupCronJobs = require("./src/cron");
-    // setupCronJobs();
+
+    try {
+      const qi = sequelize.getQueryInterface();
+      const userTable = await qi.describeTable("users");
+      const userColumns = [
+        { name: "employee_id", type: Sequelize.DataTypes.STRING(50), allowNull: true },
+        { name: "company_name", type: Sequelize.DataTypes.STRING(255), allowNull: true },
+        { name: "designation", type: Sequelize.DataTypes.STRING(255), allowNull: true },
+        {
+          name: "is_hrms_synced",
+          type: Sequelize.DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
+        },
+        { name: "pending_password", type: Sequelize.DataTypes.TEXT, allowNull: true },
+        {
+          name: "is_delete",
+          type: Sequelize.DataTypes.TINYINT,
+          allowNull: false,
+          defaultValue: 0,
+        },
+      ];
+      for (const col of userColumns) {
+        if (!userTable[col.name]) {
+          await qi.addColumn("users", col.name, {
+            type: col.type,
+            allowNull: col.allowNull,
+            defaultValue: col.defaultValue,
+          });
+          console.log(`Added users.${col.name} column`);
+        }
+      }
+    } catch (e) {
+      console.warn("User schema check skipped:", e.message);
+    }
+
+    try {
+      const qi = sequelize.getQueryInterface();
+      const apiTable = await qi.describeTable("api_config");
+      const apiColumns = [
+        {
+          name: "hrms_sync_cron_enabled",
+          type: Sequelize.DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: true,
+        },
+        {
+          name: "hrms_sync_cron_hour",
+          type: Sequelize.DataTypes.INTEGER,
+          allowNull: false,
+          defaultValue: 22,
+        },
+        {
+          name: "hrms_sync_cron_minute",
+          type: Sequelize.DataTypes.INTEGER,
+          allowNull: false,
+          defaultValue: 0,
+        },
+      ];
+      for (const col of apiColumns) {
+        if (!apiTable[col.name]) {
+          await qi.addColumn("api_config", col.name, {
+            type: col.type,
+            allowNull: col.allowNull,
+            defaultValue: col.defaultValue,
+          });
+          console.log(`Added api_config.${col.name} column`);
+        }
+      }
+    } catch (e) {
+      console.warn("API config schema check skipped:", e.message);
+    }
+
+    const setupCronJobs = require("./src/cron");
+    setupCronJobs();
+
+    const { initHrmsSyncCronFromDb } = require("./src/services/hrmsCronScheduler");
+    await initHrmsSyncCronFromDb();
 
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}.`);
