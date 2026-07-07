@@ -4,6 +4,7 @@ const LOGO_URL = "https://refexrenewables.com/img/logo.png";
 
 function getLoginUrl() {
   const base = (
+    process.env.APP_URL ||
     process.env.FRONTEND_URL ||
     process.env.CLIENT_URL ||
     "http://localhost:3030"
@@ -12,7 +13,8 @@ function getLoginUrl() {
 }
 
 function buildActivationHtml(user, plainPassword, loginUrl) {
-  const name = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "there";
+  const name =
+    `${user.first_name || ""} ${user.last_name || ""}`.trim() || "there";
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -47,7 +49,8 @@ async function sendUserActivationEmail(user, plainPassword) {
   }
 
   const loginUrl = getLoginUrl();
-  const name = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "User";
+  const name =
+    `${user.first_name || ""} ${user.last_name || ""}`.trim() || "User";
   const plain = `Your Refex QR Code account is active\n\nHello ${name},\n\nEmail: ${user.email}\nPassword: ${plainPassword}\n\nSign in: ${loginUrl}\n\nPlease change your password after your first login.`;
 
   return sendMail({
@@ -59,8 +62,11 @@ async function sendUserActivationEmail(user, plainPassword) {
 }
 
 function buildPasswordChangedHtml(user, loginUrl) {
-  const name = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "there";
-  const changedAt = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+  const name =
+    `${user.first_name || ""} ${user.last_name || ""}`.trim() || "there";
+  const changedAt = new Date().toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+  });
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -94,8 +100,11 @@ async function sendPasswordChangedEmail(user) {
   }
 
   const loginUrl = getLoginUrl();
-  const name = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "User";
-  const changedAt = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+  const name =
+    `${user.first_name || ""} ${user.last_name || ""}`.trim() || "User";
+  const changedAt = new Date().toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+  });
   const plain = `Password changed successfully\n\nHello ${name},\n\nYour Refex QR Code account password was changed on ${changedAt} IST.\n\nIf you did not make this change, please contact your administrator.\n\nSign in: ${loginUrl}`;
 
   return sendMail({
