@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { Link as RouterLink } from 'react-router-dom';
 
 import { LoadingButton } from '@mui/lab';
 import { alpha, styled, useTheme } from '@mui/material/styles';
-// @mui
 import { Box, Card, Link, TextField, Typography } from '@mui/material';
 
 import { bgGradient } from 'src/theme/css';
@@ -28,48 +28,43 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [message, setMessage] = useState('');
 
-  const handleSubmit = (event) => {
-    setLoading(true);
-    setErrorMessage('');
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    if (email === '' || email === null) {
-      setTimeout(() => {
-        setErrorMessage('Email is required.');
-        setLoading(false);
-      }, 1000);
-    } else {
-      try {
-        axios
-          .post(`/api/forgot_password`, { email })
-          .then((response) => {
-            console.log(response);
-            if (response.data.status) {
-              setStatus(true);
-              setLoading(false);
-              setErrorMessage(response.data.message);
-            }
-          })
-          .catch((error) => {
-            setTimeout(() => {
-              setLoading(false);
-              setErrorMessage(error.response.data.message);
-            }, 1000);
-          });
-      } catch (error) {
-        setTimeout(() => {
-          setLoading(false);
-          setErrorMessage(error.message);
-        }, 1000);
+    setLoading(true);
+    setMessage('');
+
+    if (!email.trim()) {
+      setMessage('Email is required.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await axios.post('/auth/forgot_password', { email: email.trim() });
+      if (response.data.status) {
+        setStatus(true);
+        setMessage(response.data.message);
+      } else {
+        setMessage(response.data.message || 'Unable to send reset link.');
       }
+    } catch (error) {
+      const validationError = error.response?.data?.results?.errors?.[0]?.msg;
+      setMessage(
+        validationError ||
+          error.response?.data?.message ||
+          'Unable to send reset link. Please try again.'
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <>
       <Helmet>
-        <title> Forgot Password | Refex Contacts </title>
+        <title> Forgot Password | Refex QR Code </title>
       </Helmet>
 
       <Box
@@ -90,14 +85,13 @@ export default function ForgotPasswordPage() {
         />
 
         <StyledContent sx={{ textAlign: 'center', alignItems: 'center' }}>
-          <Card sx={{ p: 3 }}>
+          <Card sx={{ p: 3, width: 1, maxWidth: 480 }}>
             <Typography variant="h3" paragraph>
-              Forgot your password ?
+              Forgot your password?
             </Typography>
 
             <Typography sx={{ color: 'text.secondary' }}>
-              Please enter your email address. You will receive a link to reset your password via
-              email.
+              Enter your email address and we will send you a link to reset your password.
             </Typography>
 
             <Box component="form" noValidate onSubmit={handleSubmit} sx={{ my: 2 }}>
@@ -108,8 +102,11 @@ export default function ForgotPasswordPage() {
                 id="email"
                 label="Email Address"
                 name="email"
+                type="email"
                 autoComplete="email"
                 autoFocus
+                value={email}
+                disabled={status}
                 onChange={(e) => setEmail(e.target.value)}
               />
               {!status && (
@@ -124,14 +121,16 @@ export default function ForgotPasswordPage() {
                   Request reset link
                 </LoadingButton>
               )}
-              <Typography
-                mt={1}
-                variant="subtitle1"
-                color={status ? theme.palette.success.main : theme.palette.error.main}
-                align="center"
-              >
-                {errorMessage}
-              </Typography>
+              {message && (
+                <Typography
+                  mt={1}
+                  variant="subtitle1"
+                  color={status ? theme.palette.success.main : theme.palette.error.main}
+                  align="center"
+                >
+                  {message}
+                </Typography>
+              )}
             </Box>
             <Typography
               variant="subtitle1"
@@ -139,8 +138,8 @@ export default function ForgotPasswordPage() {
               color="info"
               sx={{ fontWeight: 900 }}
             >
-              <Link href="/login" underline="hover">
-                Go To Login Page
+              <Link component={RouterLink} to="/login" underline="hover">
+                Go to login page
               </Link>
             </Typography>
           </Card>

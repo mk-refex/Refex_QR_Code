@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link as RouterLink } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -148,10 +148,10 @@ export default function LoginView() {
 
       <Stack direction="row" alignItems="center" justifyContent="flex-end" sx={{ my: 3 }}>
         <Link
-          href="forgot_password"
+          component={RouterLink}
+          to="/forgot_password"
           variant="subtitle2"
           underline="hover"
-          sx={{ cursor: 'pointer' }}
         >
           Forgot password?
         </Link>

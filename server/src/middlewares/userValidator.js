@@ -77,6 +77,30 @@ const validation = {
       .notEmpty()
       .withMessage("Password must be filled"),
   ],
+  forgotPasswordSchema: [
+    check("email")
+      .exists()
+      .withMessage("Email is required")
+      .isEmail()
+      .withMessage("Must be a valid email")
+      .normalizeEmail(),
+  ],
+  resetPasswordSchema: [
+    check("password")
+      .exists()
+      .withMessage("Password is required")
+      .isLength({ min: 6 })
+      .withMessage("Password must contain at least 6 characters"),
+    check("confirm_password")
+      .exists()
+      .withMessage("Confirm password is required")
+      .custom((value, { req }) => {
+        if (value !== req.body.password) {
+          throw new Error("Passwords do not match");
+        }
+        return true;
+      }),
+  ],
 };
 
 module.exports = {
@@ -84,4 +108,6 @@ module.exports = {
   updateUserSchema: validation.updateUserSchema,
   changePasswordSchema: validation.changePasswordSchema,
   validateLogin: validation.validateLogin,
+  forgotPasswordSchema: validation.forgotPasswordSchema,
+  resetPasswordSchema: validation.resetPasswordSchema,
 };
