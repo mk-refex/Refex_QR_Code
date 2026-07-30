@@ -9,6 +9,7 @@ import Table from '@mui/material/Table';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Select from '@mui/material/Select';
+import Collapse from '@mui/material/Collapse';
 import Backdrop from '@mui/material/Backdrop';
 import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
@@ -31,7 +32,9 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Iconify from 'src/components/iconify';
 import Scrollbar from 'src/components/scrollbar';
 
+import { EMPTY_FILTER } from '../filter-config';
 import UserFormDialog from './user-form-dialog';
+import UsersFilterBar from './users-filter-bar';
 
 // ----------------------------------------------------------------------
 
@@ -57,11 +60,16 @@ export default function UsersList() {
   const [refresh, setRefresh] = useState(0);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+  const [advancedFilterOpen, setAdvancedFilterOpen] = useState(false);
+  const [filterDraft, setFilterDraft] = useState(EMPTY_FILTER);
+  const [appliedFilter, setAppliedFilter] = useState(EMPTY_FILTER);
   const [syncing, setSyncing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editUser, setEditUser] = useState(null);
+
+  const hasAdvancedFilter = Boolean(appliedFilter.field && appliedFilter.value.trim());
 
   const action = useCallback(
     (snackbarId) => (
@@ -78,7 +86,12 @@ export default function UsersList() {
         const params = new URLSearchParams();
         params.set('page', String(page));
         params.set('limit', String(limit));
-        if (search) params.set('search', search);
+        if (search.trim()) params.set('search', search.trim());
+        if (appliedFilter.field && appliedFilter.value.trim()) {
+          params.set('filterField', appliedFilter.field);
+          params.set('filterOperator', appliedFilter.operator);
+          params.set('filterValue', appliedFilter.value.trim());
+        }
         const res = await axios.get(`/api/users?${params.toString()}`);
         if (res.data.status) {
           setUsers(res.data.results || []);
@@ -98,9 +111,24 @@ export default function UsersList() {
     };
 
     fetchUsers();
-  }, [search, refresh, page, limit, enqueueSnackbar, action]);
+  }, [search, refresh, page, limit, appliedFilter, enqueueSnackbar, action]);
 
   const filtered = useMemo(() => users, [users]);
+
+  const handleApplyFilter = () => {
+    setAppliedFilter({
+      field: filterDraft.field,
+      operator: filterDraft.operator,
+      value: filterDraft.value.trim(),
+    });
+    setPage(1);
+  };
+
+  const handleClearFilter = () => {
+    setFilterDraft(EMPTY_FILTER);
+    setAppliedFilter(EMPTY_FILTER);
+    setPage(1);
+  };
 
   const handleHrmsSync = async () => {
     try {
@@ -214,10 +242,17 @@ export default function UsersList() {
 
   return (
     <Container maxWidth="xl">
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        mb={3}
+        flexWrap="wrap"
+        gap={2}
+      >
         <Typography variant="h4">User Management</Typography>
 
-        <Stack direction="row" alignItems="center" gap={2} flexWrap="wrap" justifyContent="flex-end">
+        <Stack direction="row" alignItems="center" gap={1.5} flexWrap="wrap" justifyContent="flex-end">
           <TextField
             size="small"
             value={search}
@@ -226,7 +261,22 @@ export default function UsersList() {
               setPage(1);
             }}
             placeholder="Search users…"
+            sx={{ minWidth: { xs: '100%', sm: 220 } }}
           />
+
+          <IconButton
+            title={advancedFilterOpen ? 'Hide filters' : 'Show filters'}
+            color={advancedFilterOpen || hasAdvancedFilter ? 'primary' : 'default'}
+            onClick={() => setAdvancedFilterOpen((open) => !open)}
+            sx={{
+              border: (theme) => `1px solid ${theme.palette.divider}`,
+              borderRadius: 1,
+              width: 40,
+              height: 40,
+            }}
+          >
+            <Iconify icon="eva:funnel-fill" />
+          </IconButton>
 
           <Button
             variant="outlined"
@@ -251,6 +301,14 @@ export default function UsersList() {
       </Stack>
 
       <Card>
+        <Collapse in={advancedFilterOpen}>
+          <UsersFilterBar
+            filter={filterDraft}
+            onFilterChange={setFilterDraft}
+            onApply={handleApplyFilter}
+            onClear={handleClearFilter}
+          />
+        </Collapse>
         <Scrollbar>
           <TableContainer sx={{ overflow: 'unset' }}>
             <Table sx={{ minWidth: 1100 }}>

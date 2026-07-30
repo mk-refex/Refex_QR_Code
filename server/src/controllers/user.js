@@ -11,6 +11,7 @@ const {
   encryptPendingPassword,
   decryptPendingPassword,
 } = require("../utils/pendingPassword");
+const { buildListFilter } = require("../utils/userFilters");
 
 const saltRounds = 10;
 
@@ -18,6 +19,7 @@ const activeUserWhere = { is_delete: 0 };
 
 function mergeWhere(base, extra) {
   if (!base) return { ...extra };
+  if (!extra || !Object.keys(extra).length) return { ...base };
   return { [Op.and]: [base, extra] };
 }
 
@@ -36,6 +38,9 @@ module.exports = {
   list: async (req, res) => {
     try {
       const search = (req.query.search || "").trim();
+      const filterField = req.query.filterField;
+      const filterOperator = req.query.filterOperator;
+      const filterValue = req.query.filterValue;
       const page = Math.max(parseInt(req.query.page || "1", 10) || 1, 1);
       const limit = Math.min(
         Math.max(parseInt(req.query.limit || "10", 10) || 10, 1),
@@ -43,22 +48,30 @@ module.exports = {
       );
       const offset = (page - 1) * limit;
 
-      const where = mergeWhere(
-        search
-          ? {
-              [Op.or]: [
-                { first_name: { [Op.like]: `%${search}%` } },
-                { last_name: { [Op.like]: `%${search}%` } },
-                { email: { [Op.like]: `%${search}%` } },
-                { user_name: { [Op.like]: `%${search}%` } },
-                { employee_id: { [Op.like]: `%${search}%` } },
-                { phone: { [Op.like]: `%${search}%` } },
-                { company_name: { [Op.like]: `%${search}%` } },
-              ],
-            }
-          : undefined,
-        activeUserWhere
-      );
+      const filterResult = buildListFilter({
+        filterField,
+        filterOperator,
+        filterValue,
+      });
+      if (filterResult.error) {
+        return status.ResponseStatus(res, 400, filterResult.error);
+      }
+
+      let where = { ...activeUserWhere, ...filterResult.whereExtra };
+
+      if (search) {
+        where = mergeWhere(where, {
+          [Op.or]: [
+            { first_name: { [Op.like]: `%${search}%` } },
+            { last_name: { [Op.like]: `%${search}%` } },
+            { email: { [Op.like]: `%${search}%` } },
+            { user_name: { [Op.like]: `%${search}%` } },
+            { employee_id: { [Op.like]: `%${search}%` } },
+            { phone: { [Op.like]: `%${search}%` } },
+            { company_name: { [Op.like]: `%${search}%` } },
+          ],
+        });
+      }
 
       const { rows, count } = await User.findAndCountAll({
         where,
