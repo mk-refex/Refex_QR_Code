@@ -36,6 +36,7 @@ import Scrollbar from 'src/components/scrollbar';
 
 import { fetchAndOpenFile } from '../utils';
 import { EMPTY_FILTER, formatAccessMode } from '../filter-config';
+import { QrFeatureGuide, QR_GUIDES } from '../../common';
 import { formatQrDate, downloadQrFromCanvas } from '../../fixed-url/utils';
 import UploadFileFilterBar from './upload-file-filter-bar';
 import UploadFileViewDialog from './upload-file-view-dialog';
@@ -417,6 +418,8 @@ export default function UploadFileList() {
           />
         </Stack>
       </Card>
+
+      <QrFeatureGuide guide={QR_GUIDES.uploadFile} />
 
       <UploadFileCreateDialog
         open={createOpen}

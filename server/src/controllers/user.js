@@ -17,9 +17,16 @@ const saltRounds = 10;
 
 const activeUserWhere = { is_delete: 0 };
 
+function hasWhereKeys(obj) {
+  if (!obj || typeof obj !== "object") return false;
+  return (
+    Object.keys(obj).length > 0 || Object.getOwnPropertySymbols(obj).length > 0
+  );
+}
+
 function mergeWhere(base, extra) {
-  if (!base) return { ...extra };
-  if (!extra || !Object.keys(extra).length) return { ...base };
+  if (!hasWhereKeys(base)) return { ...extra };
+  if (!hasWhereKeys(extra)) return { ...base };
   return { [Op.and]: [base, extra] };
 }
 
@@ -57,7 +64,7 @@ module.exports = {
         return status.ResponseStatus(res, 400, filterResult.error);
       }
 
-      let where = { ...activeUserWhere, ...filterResult.whereExtra };
+      let where = mergeWhere(activeUserWhere, filterResult.whereExtra);
 
       if (search) {
         where = mergeWhere(where, {
@@ -69,6 +76,8 @@ module.exports = {
             { employee_id: { [Op.like]: `%${search}%` } },
             { phone: { [Op.like]: `%${search}%` } },
             { company_name: { [Op.like]: `%${search}%` } },
+            { designation: { [Op.like]: `%${search}%` } },
+            { role: { [Op.like]: `%${search}%` } },
           ],
         });
       }

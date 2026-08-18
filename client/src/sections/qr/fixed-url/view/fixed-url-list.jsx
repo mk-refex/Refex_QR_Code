@@ -35,6 +35,7 @@ import Scrollbar from 'src/components/scrollbar';
 
 import { downloadQrFromCanvas, formatQrDate } from '../utils';
 import { EMPTY_FILTER } from '../filter-config';
+import { QrFeatureGuide, QR_GUIDES } from '../../common';
 import FixedUrlFilterBar from './fixed-url-filter-bar';
 import FixedUrlViewDialog from './fixed-url-view-dialog';
 import FixedUrlCreateDialog from './fixed-url-create-dialog';
@@ -328,6 +329,8 @@ export default function FixedUrlList() {
           />
         </Stack>
       </Card>
+
+      <QrFeatureGuide guide={QR_GUIDES.fixedUrl} />
 
       <FixedUrlCreateDialog
         open={createOpen}

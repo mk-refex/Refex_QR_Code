@@ -35,6 +35,7 @@ import Scrollbar from 'src/components/scrollbar';
 
 import { buildQrProps } from '../utils';
 import { EMPTY_FILTER } from '../filter-config';
+import { QrFeatureGuide, QR_GUIDES } from '../../common';
 import { formatQrDate, downloadQrFromCanvas } from '../../fixed-url/utils';
 import DesignQrFilterBar from './design-qr-filter-bar';
 import DesignQrViewDialog from './design-qr-view-dialog';
@@ -312,6 +313,8 @@ export default function DesignQrList({ refreshToken, onCreate, onEdit, onDeleted
           />
         </Stack>
       </Card>
+
+      <QrFeatureGuide guide={QR_GUIDES.designQr} />
 
       <DesignQrViewDialog open={Boolean(viewItem)} onClose={() => setViewItem(null)} item={viewItem} />
 

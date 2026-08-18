@@ -34,6 +34,7 @@ import Iconify from 'src/components/iconify';
 import Scrollbar from 'src/components/scrollbar';
 
 import { EMPTY_FILTER } from '../filter-config';
+import { QrFeatureGuide, QR_GUIDES } from '../../common';
 import { formatQrDate, downloadQrFromCanvas } from '../../fixed-url/utils';
 import DynamicUrlFilterBar from './dynamic-url-filter-bar';
 import DynamicUrlViewDialog from './dynamic-url-view-dialog';
@@ -365,6 +366,8 @@ export default function DynamicUrlList() {
           />
         </Stack>
       </Card>
+
+      <QrFeatureGuide guide={QR_GUIDES.dynamicUrl} />
 
       <DynamicUrlCreateDialog
         open={createOpen}

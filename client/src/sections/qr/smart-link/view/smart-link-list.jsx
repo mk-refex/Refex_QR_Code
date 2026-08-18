@@ -34,6 +34,7 @@ import Iconify from 'src/components/iconify';
 import Scrollbar from 'src/components/scrollbar';
 
 import { EMPTY_FILTER } from '../filter-config';
+import { QrFeatureGuide, QR_GUIDES } from '../../common';
 import { formatQrDate, downloadQrFromCanvas } from '../../fixed-url/utils';
 import SmartLinkFilterBar from './smart-link-filter-bar';
 import SmartLinkViewDialog from './smart-link-view-dialog';
@@ -379,6 +380,8 @@ export default function SmartLinkList() {
           />
         </Stack>
       </Card>
+
+      <QrFeatureGuide guide={QR_GUIDES.smartLink} />
 
       <SmartLinkCreateDialog
         open={createOpen}
