@@ -111,7 +111,7 @@ export default function LoginView() {
 
   const renderForm = (
     <Box component="form" noValidate onSubmit={handleSubmit}>
-      <Stack spacing={3}>
+      <Stack spacing={{ xs: 2, sm: 2.5 }}>
         <TextField
           required
           fullWidth
@@ -119,14 +119,12 @@ export default function LoginView() {
           id="email"
           name="email"
           label="Email address"
-          margin="normal"
           autoComplete="email"
           onChange={(e) => setEmail(e.target.value)}
         />
 
         <TextField
           id="password"
-          margin="normal"
           required
           fullWidth
           name="password"
@@ -146,7 +144,7 @@ export default function LoginView() {
         />
       </Stack>
 
-      <Stack direction="row" alignItems="center" justifyContent="flex-end" sx={{ my: 3 }}>
+      <Stack direction="row" alignItems="center" justifyContent="flex-end" sx={{ my: { xs: 2, sm: 3 } }}>
         <Link
           component={RouterLink}
           to="/forgot_password"
@@ -163,14 +161,14 @@ export default function LoginView() {
         size="large"
         type="submit"
         variant="contained"
-        sx={{ mb: 1 }}
+        sx={{ mb: 1, py: { xs: 1.25, sm: 1.5 } }}
       >
         Log in
       </LoadingButton>
 
       {ssoProviders.length > 0 && (
         <>
-          <Divider sx={{ my: 2 }}>
+          <Divider sx={{ my: { xs: 1.5, sm: 2 } }}>
             <Typography variant="body2" color="text.secondary">
               Or sign in with
             </Typography>
@@ -189,7 +187,7 @@ export default function LoginView() {
                   sx={{
                     justifyContent: 'center',
                     py: 1.25,
-                    minHeight: 52,
+                    minHeight: { xs: 48, sm: 52 },
                   }}
                 >
                   {iconUrl ? (
@@ -197,7 +195,7 @@ export default function LoginView() {
                       component="img"
                       src={iconUrl}
                       alt={provider.displayName?.trim() || provider.provider}
-                      sx={{ width: 120, height: 24, objectFit: 'contain' }}
+                      sx={{ width: { xs: 100, sm: 120 }, height: 24, objectFit: 'contain' }}
                     />
                   ) : (
                     <Iconify icon="eva:shield-outline" width={24} />
@@ -209,14 +207,16 @@ export default function LoginView() {
         </>
       )}
 
-      <Typography
-        variant="body2"
-        sx={{ fontWeight: 600, mt: 2 }}
-        color={loginStatus ? 'text.success' : 'error'}
-        align="center"
-      >
-        {loginStatusMessage}
-      </Typography>
+      {loginStatusMessage ? (
+        <Typography
+          variant="body2"
+          sx={{ fontWeight: 600, mt: 2 }}
+          color={loginStatus ? 'text.success' : 'error'}
+          align="center"
+        >
+          {loginStatusMessage}
+        </Typography>
+      ) : null}
     </Box>
   );
 
@@ -227,29 +227,49 @@ export default function LoginView() {
           color: alpha(theme.palette.background.default, 0.7),
           imgUrl: '/assets/images/covers/cover_2.jpg',
         }),
-        height: 1,
+        minHeight: { xs: '100dvh', sm: '100vh' },
+        display: 'flex',
+        flexDirection: 'column',
+        px: { xs: 2, sm: 3 },
+        py: { xs: 2.5, sm: 4 },
       }}
     >
-      <Logo
-        disabledLink
-        sx={{
-          position: 'fixed',
-          top: { xs: 16, md: 24 },
-          left: { xs: 16, md: 24 },
-        }}
-      />
-
-      <Stack alignItems="center" justifyContent="center" spacing={5} sx={{ height: 1 }}>
+      <Stack
+        flex={1}
+        alignItems="center"
+        justifyContent="center"
+        spacing={{ xs: 2, sm: 3 }}
+        sx={{ width: 1, maxWidth: 440, mx: 'auto' }}
+      >
         <Card
           sx={{
-            p: 5,
+            p: { xs: 2.5, sm: 4, md: 5 },
             width: 1,
-            maxWidth: 420,
           }}
         >
-          <Typography variant="h4" component="div" my={3}>
-            Log in to Refex QR Code
-          </Typography>
+          <Stack alignItems="center" spacing={1.25} sx={{ mb: { xs: 2.5, sm: 3 } }}>
+            <Logo
+              disabledLink
+              sx={{
+                height: { xs: 40, sm: 48 },
+                width: 'auto',
+                maxWidth: { xs: 180, sm: 220 },
+                objectFit: 'contain',
+              }}
+            />
+            <Typography
+              variant="h4"
+              component="div"
+              textAlign="center"
+              sx={{
+                whiteSpace: 'nowrap',
+                fontSize: { xs: '1.05rem', sm: '1.25rem', md: '1.5rem' },
+                lineHeight: 1.3,
+              }}
+            >
+              Log in to Refex QR Code
+            </Typography>
+          </Stack>
 
           {renderForm}
         </Card>
