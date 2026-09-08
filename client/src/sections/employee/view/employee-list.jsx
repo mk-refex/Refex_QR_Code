@@ -18,7 +18,7 @@ import { RouterLink } from 'src/routes/components';
 // import { useRouter } from 'src/routes/hooks';
 
 import Iconify from 'src/components/iconify';
-import Scrollbar from 'src/components/scrollbar';
+import ListPageHeader from 'src/components/list-page-header';
 
 import TableNoData from '../employee-table/table-no-data';
 import EmployeeTableRow from '../employee-table/employeee-table-row';
@@ -166,24 +166,31 @@ export default function EmployeeList() {
 
   return (
     <Container maxWidth="xl">
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-        <Typography variant="h4">Employee List</Typography>
+      <ListPageHeader
+        title="Employee List"
+        actions={
+          <>
+            <Button
+              href="/employees/create"
+              variant="contained"
+              component={RouterLink}
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              sx={{ flex: { xs: 1, sm: 'none' }, whiteSpace: 'nowrap' }}
+            >
+              New Employee
+            </Button>
 
-        <Stack direction="row" alignItems="center" gap={3}>
-          <Button
-            href="/employees/create"
-            variant="contained"
-            component={RouterLink}
-            startIcon={<Iconify icon="eva:plus-fill" />}
-          >
-            New Employee
-          </Button>
-
-          <Button href="/employees/inactive" variant="contained" component={RouterLink}>
-            View Inactive Employees
-          </Button>
-        </Stack>
-      </Stack>
+            <Button
+              href="/employees/inactive"
+              variant="contained"
+              component={RouterLink}
+              sx={{ flex: { xs: 1, sm: 'none' }, whiteSpace: 'nowrap' }}
+            >
+              View Inactive Employees
+            </Button>
+          </>
+        }
+      />
 
       <Card>
         <EmployeeTableToolbar
@@ -194,9 +201,8 @@ export default function EmployeeList() {
           onFilterName={handleFilterByName}
         />
 
-        <Scrollbar>
-          <TableContainer sx={{ overflow: 'unset' }}>
-            <Table sx={{ minWidth: 800 }}>
+        <TableContainer sx={{ overflowX: 'auto' }}>
+          <Table sx={{ minWidth: 800 }}>
               <EmployeeTableHead
                 order={order}
                 orderBy={orderBy}
@@ -237,7 +243,6 @@ export default function EmployeeList() {
               </TableBody>
             </Table>
           </TableContainer>
-        </Scrollbar>
 
         {/* <TablePagination
           page={page}

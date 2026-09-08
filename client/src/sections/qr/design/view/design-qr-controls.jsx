@@ -262,13 +262,24 @@ export default function DesignQrControls({
         <ControlBlock>
           <Stack spacing={1}>
             <Typography variant="body2">logoImage</Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap">
-              <Button variant="outlined" component="label" size="small">
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              flexWrap="wrap"
+              useFlexGap
+            >
+              <Button variant="outlined" component="label" size="small" fullWidth={false} sx={{ width: { xs: '100%', sm: 'auto' } }}>
                 Choose file
                 <input type="file" accept="image/*" hidden onChange={onLogoSelect} />
               </Button>
               {logoPreview && (
-                <Button variant="outlined" color="error" size="small" onClick={onLogoClear}>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  onClick={onLogoClear}
+                  sx={{ width: { xs: '100%', sm: 'auto' } }}
+                >
                   Remove
                 </Button>
               )}

@@ -90,7 +90,7 @@ NavMenu.propTypes = {
 // ----------------------------------------------------------------------
 
 function SidebarShell({ headerHeight, pathname }) {
-  const sidebarHeight = `calc(100vh - ${headerHeight}px)`;
+  const sidebarHeight = `calc(100dvh - ${headerHeight}px)`;
 
   return (
     <Box
@@ -135,7 +135,7 @@ export default function Nav({ open = true, mobileOpen = false, headerHeight = 64
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  const sidebarHeight = `calc(100vh - ${headerHeight}px)`;
+  const sidebarHeight = `calc(100dvh - ${headerHeight}px)`;
 
   if (!upLg) {
     return (

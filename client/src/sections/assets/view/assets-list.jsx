@@ -32,7 +32,7 @@ import DialogActions from '@mui/material/DialogActions';
 import { RouterLink } from 'src/routes/components';
 
 import Iconify from 'src/components/iconify';
-import Scrollbar from 'src/components/scrollbar';
+import ListPageHeader from 'src/components/list-page-header';
 
 const TABLE_COLUMNS = [
   { id: 'qr', label: 'QR' },
@@ -188,50 +188,65 @@ export default function AssetsList() {
 
   return (
     <Container maxWidth="xl">
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
-        <Typography variant="h4">Assets List</Typography>
+      <ListPageHeader
+        title="Assets List"
+        actions={
+          <>
+            <TextField
+              size="small"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Search assets…"
+              sx={{
+                width: { xs: '100%', sm: 220 },
+                flex: { xs: '1 1 100%', sm: '0 1 auto' },
+              }}
+            />
 
-        <Stack direction="row" alignItems="center" gap={2}>
-          <TextField
-            size="small"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Search assets…"
-          />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleImportFile}
+              style={{ display: 'none' }}
+            />
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            onChange={handleImportFile}
-            style={{ display: 'none' }}
-          />
+            <Button
+              variant="outlined"
+              onClick={handleImportClick}
+              startIcon={<Iconify icon="solar:upload-minimalistic-bold" />}
+              sx={{ flex: { xs: 1, sm: 'none' }, whiteSpace: 'nowrap' }}
+            >
+              Import
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={handleExport}
+              startIcon={<Iconify icon="solar:download-minimalistic-bold" />}
+              sx={{ flex: { xs: 1, sm: 'none' }, whiteSpace: 'nowrap' }}
+            >
+              Export
+            </Button>
 
-          <Button variant="outlined" onClick={handleImportClick} startIcon={<Iconify icon="solar:upload-minimalistic-bold" />}>
-            Import
-          </Button>
-          <Button variant="outlined" onClick={handleExport} startIcon={<Iconify icon="solar:download-minimalistic-bold" />}>
-            Export
-          </Button>
-
-          <Button
-            href="/assets/create"
-            variant="contained"
-            component={RouterLink}
-            startIcon={<Iconify icon="eva:plus-fill" />}
-          >
-            New Asset
-          </Button>
-        </Stack>
-      </Stack>
+            <Button
+              href="/assets/create"
+              variant="contained"
+              component={RouterLink}
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              sx={{ flex: { xs: 1, sm: 'none' }, whiteSpace: 'nowrap' }}
+            >
+              New Asset
+            </Button>
+          </>
+        }
+      />
 
       <Card>
-        <Scrollbar>
-          <TableContainer sx={{ overflow: 'unset' }}>
-            <Table sx={{ minWidth: 1200 }}>
+        <TableContainer sx={{ overflowX: 'auto' }}>
+          <Table sx={{ minWidth: 1200 }}>
               <TableHead>
                 <TableRow>
                   {TABLE_COLUMNS.map((c) => (
@@ -308,7 +323,6 @@ export default function AssetsList() {
               </TableBody>
             </Table>
           </TableContainer>
-        </Scrollbar>
       </Card>
 
       <Stack direction="row" alignItems="center" justifyContent="center" my={3}>

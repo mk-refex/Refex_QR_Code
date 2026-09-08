@@ -6,44 +6,88 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
+
+import Iconify from 'src/components/iconify';
 
 import { downloadQrFromCanvas } from '../../fixed-url/utils';
+import {
+  RESPONSIVE_DIALOG_ACTIONS_SX,
+  RESPONSIVE_DIALOG_CONTENT_SX,
+  RESPONSIVE_DIALOG_PAPER_SX,
+} from '../../common/responsive-dialog';
 
 // ----------------------------------------------------------------------
 
 export default function DynamicUrlViewDialog({ open, onClose, item }) {
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+
   if (!item) {
     return null;
   }
 
   const canvasId = `dynamic-qr-view-${item.id}`;
+  let qrSize = 240;
+  if (fullScreen) qrSize = 200;
+  else if (isTablet) qrSize = 220;
 
   const handleDownload = () => {
     downloadQrFromCanvas(canvasId, item.code);
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        QR Code — {item.code}
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      fullScreen={fullScreen}
+      PaperProps={{ sx: RESPONSIVE_DIALOG_PAPER_SX }}
+    >
+      <DialogTitle
+        sx={{
+          pr: 6,
+          fontSize: { xs: '1.1rem', sm: '1.25rem' },
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1,
+          wordBreak: 'break-word',
+        }}
+      >
+        <Box component="span" sx={{ minWidth: 0 }}>
+          QR Code — {item.code}
+        </Box>
+        {fullScreen && (
+          <IconButton onClick={onClose} edge="end" aria-label="Close">
+            <Iconify icon="eva:close-fill" />
+          </IconButton>
+        )}
       </DialogTitle>
-      <DialogContent dividers>
+      <DialogContent dividers sx={RESPONSIVE_DIALOG_CONTENT_SX}>
         <Stack spacing={2} alignItems="center">
           <Box
             sx={{
-              p: 2,
+              p: { xs: 1.5, sm: 2 },
               borderRadius: 1,
               bgcolor: 'background.neutral',
-              border: (theme) => `1px solid ${theme.palette.divider}`,
+              border: (t) => `1px solid ${t.palette.divider}`,
+              maxWidth: '100%',
+              display: 'flex',
+              justifyContent: 'center',
             }}
           >
             <QRCode
               id={canvasId}
               value={item.static_url}
-              size={240}
+              size={qrSize}
               quietZone={12}
               bgColor="#FFFFFF"
               fgColor="#000000"
@@ -63,9 +107,16 @@ export default function DynamicUrlViewDialog({ open, onClose, item }) {
           </Stack>
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Close</Button>
-        <Button variant="contained" onClick={handleDownload}>
+      <DialogActions sx={RESPONSIVE_DIALOG_ACTIONS_SX}>
+        <Button onClick={onClose} fullWidth={fullScreen}>
+          Close
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleDownload}
+          fullWidth={fullScreen}
+          startIcon={<Iconify icon="eva:download-outline" />}
+        >
           Download PNG
         </Button>
       </DialogActions>

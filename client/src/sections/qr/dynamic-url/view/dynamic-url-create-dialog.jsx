@@ -6,13 +6,26 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
+
+import Iconify from 'src/components/iconify';
+
+import {
+  RESPONSIVE_DIALOG_ACTIONS_SX,
+  RESPONSIVE_DIALOG_CONTENT_SX,
+  RESPONSIVE_DIALOG_PAPER_SX,
+} from '../../common/responsive-dialog';
 
 // ----------------------------------------------------------------------
 
 export default function DynamicUrlCreateDialog({ open, onClose, onSubmit, saving }) {
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const [name, setName] = useState('');
   const [dynamicValue, setDynamicValue] = useState('');
   const [error, setError] = useState('');
@@ -45,10 +58,37 @@ export default function DynamicUrlCreateDialog({ open, onClose, onSubmit, saving
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <Box component="form" onSubmit={handleSubmit}>
-        <DialogTitle>Create Dynamic URL QR Code</DialogTitle>
-        <DialogContent dividers>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      fullScreen={fullScreen}
+      PaperProps={{ sx: RESPONSIVE_DIALOG_PAPER_SX }}
+    >
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{ display: 'flex', flexDirection: 'column', height: fullScreen ? '100%' : 'auto' }}
+      >
+        <DialogTitle
+          sx={{
+            pr: 6,
+            fontSize: { xs: '1.15rem', sm: '1.25rem' },
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1,
+          }}
+        >
+          Create Dynamic URL QR Code
+          {fullScreen && (
+            <IconButton onClick={handleClose} disabled={saving} edge="end" aria-label="Close">
+              <Iconify icon="eva:close-fill" />
+            </IconButton>
+          )}
+        </DialogTitle>
+        <DialogContent dividers sx={{ ...RESPONSIVE_DIALOG_CONTENT_SX, flex: 1 }}>
           <Stack spacing={2} sx={{ pt: 0.5 }}>
             <TextField
               required
@@ -66,7 +106,7 @@ export default function DynamicUrlCreateDialog({ open, onClose, onSubmit, saving
               required
               fullWidth
               multiline
-              minRows={3}
+              minRows={fullScreen ? 5 : 3}
               label="Dynamic URL / Data"
               placeholder="https://example.com/landing-page"
               value={dynamicValue}
@@ -79,11 +119,11 @@ export default function DynamicUrlCreateDialog({ open, onClose, onSubmit, saving
             />
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} disabled={saving}>
+        <DialogActions sx={RESPONSIVE_DIALOG_ACTIONS_SX}>
+          <Button onClick={handleClose} disabled={saving} fullWidth={fullScreen}>
             Cancel
           </Button>
-          <Button type="submit" variant="contained" disabled={saving}>
+          <Button type="submit" variant="contained" disabled={saving} fullWidth={fullScreen}>
             {saving ? 'Creating…' : 'Create'}
           </Button>
         </DialogActions>

@@ -7,6 +7,8 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
 
 import Iconify from 'src/components/iconify';
 
@@ -34,6 +36,8 @@ export default function DesignQrPreview({
   onNameChange,
   onSave,
 }) {
+  const theme = useTheme();
+  const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const scrollRef = useRef(null);
   const [contentMaxWidth, setContentMaxWidth] = useState(PREVIEW_QR_MAX_WIDTH);
 
@@ -68,11 +72,9 @@ export default function DesignQrPreview({
     }, 200);
   };
 
-  const saveLabel = (() => {
-    if (saving) return 'Saving…';
-    if (editingId) return 'Update';
-    return 'Save';
-  })();
+  let saveLabel = 'Save';
+  if (saving) saveLabel = 'Saving…';
+  else if (editingId) saveLabel = 'Update';
 
   return (
     <Box
@@ -85,50 +87,76 @@ export default function DesignQrPreview({
       }}
     >
       <Stack
-        direction="row"
-        alignItems="center"
+        direction={{ xs: 'column', md: 'row' }}
+        alignItems={{ xs: 'stretch', md: 'center' }}
         spacing={1}
-        flexWrap="nowrap"
         sx={{
           flexShrink: 0,
           pb: 1.5,
-          borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-          overflow: 'hidden',
+          borderBottom: (t) => `1px solid ${t.palette.divider}`,
         }}
       >
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
-          Live Preview
-        </Typography>
-
-        <TextField
-          size="small"
-          placeholder="Design name"
-          value={design.name}
-          onChange={(e) => onNameChange(e.target.value)}
-          sx={{ flex: '1 1 auto', minWidth: 0 }}
-        />
-
-        <Button
-          size="small"
-          variant="contained"
-          startIcon={<Iconify icon="eva:download-outline" width={18} />}
-          onClick={handleDownload}
-          sx={{ flexShrink: 0, width: ACTION_BUTTON_WIDTH, minWidth: ACTION_BUTTON_WIDTH }}
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={1}
+          sx={{ width: '100%', minWidth: 0 }}
         >
-          Download
-        </Button>
+          <Typography
+            variant="subtitle1"
+            sx={{ fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            Live Preview
+          </Typography>
 
-        <Button
-          size="small"
-          variant="contained"
-          color="success"
-          startIcon={<Iconify icon="eva:save-outline" width={18} />}
-          onClick={() => onSave(design)}
-          disabled={saving}
-          sx={{ flexShrink: 0, width: ACTION_BUTTON_WIDTH, minWidth: ACTION_BUTTON_WIDTH }}
+          <TextField
+            size="small"
+            placeholder="Design name"
+            value={design.name}
+            onChange={(e) => onNameChange(e.target.value)}
+            sx={{ flex: '1 1 auto', minWidth: 0 }}
+          />
+        </Stack>
+
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            flexShrink: 0,
+            width: { xs: '100%', md: 'auto' },
+            justifyContent: { xs: 'stretch', md: 'flex-end' },
+          }}
         >
-          {saveLabel}
-        </Button>
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={!isCompact ? <Iconify icon="eva:download-outline" width={18} /> : undefined}
+            onClick={handleDownload}
+            sx={{
+              flex: { xs: 1, md: 'none' },
+              width: { md: ACTION_BUTTON_WIDTH },
+              minWidth: { md: ACTION_BUTTON_WIDTH },
+            }}
+          >
+            Download
+          </Button>
+
+          <Button
+            size="small"
+            variant="contained"
+            color="success"
+            startIcon={!isCompact ? <Iconify icon="eva:save-outline" width={18} /> : undefined}
+            onClick={() => onSave(design)}
+            disabled={saving}
+            sx={{
+              flex: { xs: 1, md: 'none' },
+              width: { md: ACTION_BUTTON_WIDTH },
+              minWidth: { md: ACTION_BUTTON_WIDTH },
+            }}
+          >
+            {saveLabel}
+          </Button>
+        </Stack>
       </Stack>
 
       <Box
@@ -141,9 +169,10 @@ export default function DesignQrPreview({
           overflowX: 'hidden',
           overflowY: 'auto',
           borderRadius: 1.5,
-          bgcolor: (theme) =>
-            theme.palette.mode === 'light' ? theme.palette.grey[300] : theme.palette.grey[700],
-          border: (theme) => `1px solid ${theme.palette.divider}`,
+          bgcolor: (t) =>
+            t.palette.mode === 'light' ? t.palette.grey[300] : t.palette.grey[700],
+          border: (t) => `1px solid ${t.palette.divider}`,
+          WebkitOverflowScrolling: 'touch',
         }}
       >
         <Box
@@ -151,7 +180,7 @@ export default function DesignQrPreview({
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'flex-start',
-            p: `${PREVIEW_MAT_PADDING}px`,
+            p: { xs: 1.5, sm: `${PREVIEW_MAT_PADDING}px` },
             minHeight: '100%',
             boxSizing: 'border-box',
           }}

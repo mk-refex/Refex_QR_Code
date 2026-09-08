@@ -13,6 +13,7 @@ import {
   getFilterFields,
   getOperatorsForField,
 } from '../filter-config';
+import { RESPONSIVE_FILTER_BAR_SX } from '../../common/responsive-dialog';
 
 // ----------------------------------------------------------------------
 
@@ -32,11 +33,15 @@ export default function UploadFileFilterBar({ admin, filter, onFilterChange, onA
       direction={{ xs: 'column', md: 'row' }}
       spacing={1.5}
       alignItems={{ xs: 'stretch', md: 'center' }}
-      sx={{ p: 2, borderBottom: (theme) => `dashed 1px ${theme.palette.divider}` }}
+      sx={RESPONSIVE_FILTER_BAR_SX}
     >
-      <FormControl size="small" sx={{ minWidth: 160 }}>
+      <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 160 } }}>
         <InputLabel>Column</InputLabel>
-        <Select label="Column" value={filter.field} onChange={(e) => handleFieldChange(e.target.value)}>
+        <Select
+          label="Column"
+          value={filter.field}
+          onChange={(e) => handleFieldChange(e.target.value)}
+        >
           <MenuItem value="">
             <em>Select column</em>
           </MenuItem>
@@ -48,7 +53,7 @@ export default function UploadFileFilterBar({ admin, filter, onFilterChange, onA
         </Select>
       </FormControl>
 
-      <FormControl size="small" sx={{ minWidth: 150 }} disabled={!filter.field}>
+      <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 150 } }} disabled={!filter.field}>
         <InputLabel>Operator</InputLabel>
         <Select
           label="Operator"
@@ -81,11 +86,23 @@ export default function UploadFileFilterBar({ admin, filter, onFilterChange, onA
         }}
       />
 
-      <Stack direction="row" spacing={1}>
-        <Button variant="contained" onClick={onApply} disabled={!filter.field || !filter.value.trim()}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>
+        <Button
+          variant="contained"
+          onClick={onApply}
+          disabled={!filter.field || !filter.value.trim()}
+          fullWidth
+          sx={{ width: { md: 'auto' } }}
+        >
           Apply
         </Button>
-        <Button variant="outlined" onClick={onClear} disabled={!hasActiveFilter}>
+        <Button
+          variant="outlined"
+          onClick={onClear}
+          disabled={!hasActiveFilter}
+          fullWidth
+          sx={{ width: { md: 'auto' } }}
+        >
           Clear
         </Button>
       </Stack>

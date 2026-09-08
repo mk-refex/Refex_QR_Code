@@ -30,7 +30,7 @@ import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import Iconify from 'src/components/iconify';
-import Scrollbar from 'src/components/scrollbar';
+import ListPageHeader from 'src/components/list-page-header';
 
 import { EMPTY_FILTER } from '../filter-config';
 import UserFormDialog from './user-form-dialog';
@@ -242,63 +242,62 @@ export default function UsersList() {
 
   return (
     <Container maxWidth="xl">
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        mb={3}
-        flexWrap="wrap"
-        gap={2}
-      >
-        <Typography variant="h4">User Management</Typography>
+      <ListPageHeader
+        title="User Management"
+        actions={
+          <>
+            <TextField
+              size="small"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Search users…"
+              sx={{
+                width: { xs: '100%', sm: 220 },
+                flex: { xs: '1 1 100%', sm: '0 1 auto' },
+              }}
+            />
 
-        <Stack direction="row" alignItems="center" gap={1.5} flexWrap="wrap" justifyContent="flex-end">
-          <TextField
-            size="small"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Search users…"
-            sx={{ minWidth: { xs: '100%', sm: 220 } }}
-          />
+            <IconButton
+              title={advancedFilterOpen ? 'Hide filters' : 'Show filters'}
+              color={advancedFilterOpen || hasAdvancedFilter ? 'primary' : 'default'}
+              onClick={() => setAdvancedFilterOpen((open) => !open)}
+              sx={{
+                border: (theme) => `1px solid ${theme.palette.divider}`,
+                borderRadius: 1,
+                width: 40,
+                height: 40,
+              }}
+            >
+              <Iconify icon="eva:funnel-fill" />
+            </IconButton>
 
-          <IconButton
-            title={advancedFilterOpen ? 'Hide filters' : 'Show filters'}
-            color={advancedFilterOpen || hasAdvancedFilter ? 'primary' : 'default'}
-            onClick={() => setAdvancedFilterOpen((open) => !open)}
-            sx={{
-              border: (theme) => `1px solid ${theme.palette.divider}`,
-              borderRadius: 1,
-              width: 40,
-              height: 40,
-            }}
-          >
-            <Iconify icon="eva:funnel-fill" />
-          </IconButton>
+            <Button
+              variant="outlined"
+              onClick={handleHrmsSync}
+              disabled={syncing}
+              startIcon={<Iconify icon="eva:refresh-fill" />}
+              sx={{ flex: { xs: 1, sm: 'none' }, whiteSpace: 'nowrap' }}
+            >
+              Sync HRMS
+            </Button>
 
-          <Button
-            variant="outlined"
-            onClick={handleHrmsSync}
-            disabled={syncing}
-            startIcon={<Iconify icon="eva:refresh-fill" />}
-          >
-            Sync HRMS
-          </Button>
-
-          <Button
-            variant="contained"
-            onClick={() => {
-              setEditUser(null);
-              setFormOpen(true);
-            }}
-            startIcon={<Iconify icon="eva:plus-fill" />}
-          >
-            New User
-          </Button>
-        </Stack>
-      </Stack>
+            <Button
+              variant="contained"
+              onClick={() => {
+                setEditUser(null);
+                setFormOpen(true);
+              }}
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              sx={{ flex: { xs: 1, sm: 'none' }, whiteSpace: 'nowrap' }}
+            >
+              New User
+            </Button>
+          </>
+        }
+      />
 
       <Card>
         <Collapse in={advancedFilterOpen}>
@@ -309,8 +308,7 @@ export default function UsersList() {
             onClear={handleClearFilter}
           />
         </Collapse>
-        <Scrollbar>
-          <TableContainer sx={{ overflow: 'unset' }}>
+        <TableContainer sx={{ overflowX: 'auto' }}>
             <Table sx={{ minWidth: 1100 }}>
               <TableHead>
                 <TableRow>
@@ -398,7 +396,6 @@ export default function UsersList() {
               </TableBody>
             </Table>
           </TableContainer>
-        </Scrollbar>
       </Card>
 
       <Stack direction="row" alignItems="center" justifyContent="center" my={3}>

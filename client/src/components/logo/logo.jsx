@@ -23,7 +23,7 @@ const Logo = forwardRef(({ disabledLink = false, sx, ...other }, ref) => {
   const logo = (
     <Box
       component="img"
-      src="/assets/refex_logo.png"
+      src="/assets/refexone-logo.png"
       sx={{ height: 44, cursor: 'pointer', ...sx }}
     />
   );

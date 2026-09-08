@@ -33,7 +33,7 @@ export default function AdminLayout({ children }) {
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100vh',
+        minHeight: { xs: '100dvh', sm: '100vh' },
         width: '100%',
       }}
     >
@@ -62,8 +62,8 @@ export default function AdminLayout({ children }) {
             flexDirection: 'column',
           }}
         >
-          <Main>{children}</Main>
-          <Footer sx={{ py: 2 }} />
+          <Main sx={{ flex: '1 0 auto' }}>{children}</Main>
+          <Footer />
         </Box>
       </Box>
     </Box>

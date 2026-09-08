@@ -10,6 +10,8 @@ import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogContent from '@mui/material/DialogContent';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
 
 import Iconify from 'src/components/iconify';
 
@@ -23,6 +25,8 @@ import { buildSaveFormData, designFromSavedItem } from '../utils';
 const PREVIEW_CANVAS_ID = 'design-qr-playground-preview';
 
 export default function DesignQrPlayground({ open, onClose, onSaved, initialItem }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
   const { enqueueSnackbar } = useSnackbar();
   const [design, setDesign] = useState(() => cloneDesign(DEFAULT_DESIGN));
   const [logoPreview, setLogoPreview] = useState('');
@@ -108,39 +112,68 @@ export default function DesignQrPlayground({ open, onClose, onSaved, initialItem
 
   return (
     <Dialog fullScreen open={open} onClose={onClose}>
-      <Toolbar sx={{ borderBottom: (theme) => `1px solid ${theme.palette.divider}`, flexShrink: 0 }}>
+      <Toolbar
+        sx={{
+          borderBottom: (t) => `1px solid ${t.palette.divider}`,
+          flexShrink: 0,
+          gap: 1,
+          minHeight: { xs: 56, sm: 64 },
+          px: { xs: 1, sm: 2 },
+        }}
+      >
         <IconButton edge="start" onClick={onClose} aria-label="close">
           <Iconify icon="eva:close-fill" />
         </IconButton>
-        <Typography variant="h6" sx={{ flex: 1, ml: 1 }}>
-          QR Design Playground
+        <Typography
+          variant="h6"
+          sx={{
+            flex: 1,
+            ml: { xs: 0.5, sm: 1 },
+            fontSize: { xs: '1rem', sm: '1.25rem' },
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {editingId ? 'Edit Design' : 'QR Design Playground'}
         </Typography>
-        <Button color="inherit" onClick={onClose}>
-          Close
-        </Button>
+        {!isMobile && (
+          <Button color="inherit" onClick={onClose}>
+            Close
+          </Button>
+        )}
       </Toolbar>
 
-      <DialogContent sx={{ p: 0, height: 'calc(100vh - 64px)', overflow: 'hidden' }}>
+      <DialogContent
+        sx={{
+          p: 0,
+          height: { xs: 'calc(100vh - 56px)', sm: 'calc(100vh - 64px)' },
+          overflow: 'hidden',
+        }}
+      >
         <Box
           sx={{
             display: 'flex',
-            flexDirection: { xs: 'column', lg: 'row' },
+            // Preview first on mobile/tablet; side-by-side on large screens
+            flexDirection: { xs: 'column-reverse', lg: 'row' },
             height: '100%',
             overflow: 'hidden',
           }}
         >
           <Box
             sx={{
-              flex: { xs: '0 0 auto', lg: '1 1 50%' },
+              flex: { xs: '1 1 auto', lg: '1 1 50%' },
               width: { lg: '50%' },
               maxWidth: { lg: '50%' },
               minWidth: 0,
               minHeight: 0,
               overflow: 'auto',
-              p: { xs: 2, md: 2.5 },
+              p: { xs: 1.5, sm: 2, md: 2.5 },
               borderRight: { lg: 1 },
-              borderBottom: { xs: 1, lg: 0 },
+              borderTop: { xs: 1, lg: 0 },
               borderColor: 'divider',
+              WebkitOverflowScrolling: 'touch',
             }}
           >
             <DesignQrControls
@@ -158,16 +191,19 @@ export default function DesignQrPlayground({ open, onClose, onSaved, initialItem
               width: { lg: '50%' },
               maxWidth: { lg: '50%' },
               height: { xs: 'auto', lg: '100%' },
-              maxHeight: { xs: '50vh', lg: '100%' },
+              maxHeight: { xs: '42vh', sm: '46vh', lg: '100%' },
               minWidth: 0,
-              minHeight: 0,
+              minHeight: { xs: 280, lg: 0 },
               overflow: 'hidden',
-              p: 2,
+              p: { xs: 1.5, sm: 2 },
               bgcolor: 'background.neutral',
               borderLeft: { lg: 1 },
               borderColor: 'divider',
               display: 'flex',
               flexDirection: 'column',
+              position: { xs: 'sticky', lg: 'relative' },
+              top: { xs: 0, lg: 'auto' },
+              zIndex: { xs: 1, lg: 'auto' },
             }}
           >
             <DesignQrPreview

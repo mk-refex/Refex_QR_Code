@@ -1,4 +1,5 @@
 import axios from 'axios';
+import PropTypes from 'prop-types';
 import { useSnackbar } from 'notistack';
 import { QRCode } from 'react-qrcode-logo';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -11,6 +12,7 @@ import Table from '@mui/material/Table';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Select from '@mui/material/Select';
+import Divider from '@mui/material/Divider';
 import Collapse from '@mui/material/Collapse';
 import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
@@ -27,16 +29,19 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import TableContainer from '@mui/material/TableContainer';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
 
 import { isAdmin } from 'src/utils/roles';
 import { useAuth } from 'src/context/AuthContext';
 
 import Iconify from 'src/components/iconify';
-import Scrollbar from 'src/components/scrollbar';
+import ListPageHeader from 'src/components/list-page-header';
 
 import { fetchAndOpenFile } from '../utils';
 import { EMPTY_FILTER, formatAccessMode } from '../filter-config';
 import { QrFeatureGuide, QR_GUIDES } from '../../common';
+import { RESPONSIVE_DIALOG_ACTIONS_SX } from '../../common/responsive-dialog';
 import { formatQrDate, downloadQrFromCanvas } from '../../fixed-url/utils';
 import UploadFileFilterBar from './upload-file-filter-bar';
 import UploadFileViewDialog from './upload-file-view-dialog';
@@ -66,7 +71,127 @@ const ADMIN_COLUMNS = [
   { id: 'actions', label: '' },
 ];
 
+function MobileQrCard({
+  row,
+  admin,
+  onView,
+  onViewFile,
+  onDownloadFile,
+  onDownloadQr,
+  onEdit,
+  onDelete,
+}) {
+  return (
+    <Box
+      sx={{
+        p: 2,
+        borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+        '&:last-of-type': { borderBottom: 0 },
+      }}
+    >
+      <Stack spacing={1.25}>
+        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1}>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, wordBreak: 'break-word' }}>
+              {row.code}
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5, wordBreak: 'break-word' }}>
+              {row.name}
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 0.25, wordBreak: 'break-word' }}
+              title={row.original_name}
+            >
+              {row.original_name}
+            </Typography>
+          </Box>
+
+          <Stack
+            direction="row"
+            alignItems="center"
+            sx={{
+              flexShrink: 0,
+              flexWrap: 'nowrap',
+              '& .MuiIconButton-root': { p: 0.5 },
+            }}
+          >
+            <IconButton size="small" title="View QR" onClick={() => onView(row)}>
+              <Iconify icon="solar:eye-bold" />
+            </IconButton>
+            <IconButton size="small" title="View file" onClick={() => onViewFile(row)}>
+              <Iconify icon="solar:document-bold" />
+            </IconButton>
+            <IconButton size="small" title="Download file" onClick={() => onDownloadFile(row)}>
+              <Iconify icon="eva:download-outline" />
+            </IconButton>
+            <IconButton size="small" title="Download QR" onClick={() => onDownloadQr(row)}>
+              <Iconify icon="mdi:qrcode" />
+            </IconButton>
+            <IconButton size="small" title="Edit" onClick={() => onEdit(row)}>
+              <Iconify icon="solar:pen-bold" />
+            </IconButton>
+            <IconButton size="small" color="error" title="Delete" onClick={() => onDelete(row)}>
+              <Iconify icon="solar:trash-bin-trash-bold" />
+            </IconButton>
+          </Stack>
+        </Stack>
+
+        <Stack direction="row" flexWrap="wrap" spacing={1} useFlexGap alignItems="center">
+          <Chip
+            size="small"
+            label={formatAccessMode(row.access_mode)}
+            color={row.access_mode === 'download' ? 'warning' : 'info'}
+            variant="soft"
+          />
+        </Stack>
+
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ wordBreak: 'break-all', display: 'block' }}
+          title={row.static_url}
+        >
+          {row.static_url}
+        </Typography>
+
+        <Stack
+          direction="row"
+          flexWrap="wrap"
+          spacing={1}
+          useFlexGap
+          sx={{ color: 'text.secondary' }}
+        >
+          {admin && (
+            <Typography variant="caption">
+              By: <strong>{row.created_by || '—'}</strong>
+            </Typography>
+          )}
+          <Typography variant="caption">
+            Created: <strong>{formatQrDate(row.created_at)}</strong>
+          </Typography>
+        </Stack>
+      </Stack>
+    </Box>
+  );
+}
+
+MobileQrCard.propTypes = {
+  row: PropTypes.object,
+  admin: PropTypes.bool,
+  onView: PropTypes.func,
+  onViewFile: PropTypes.func,
+  onDownloadFile: PropTypes.func,
+  onDownloadQr: PropTypes.func,
+  onEdit: PropTypes.func,
+  onDelete: PropTypes.func,
+};
+
 export default function UploadFileList() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const fullScreenDialog = useMediaQuery(theme.breakpoints.down('sm'));
   const { user } = useAuth();
   const admin = isAdmin(user);
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
@@ -245,45 +370,51 @@ export default function UploadFileList() {
   };
 
   return (
-    <Container maxWidth="xl">
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3} flexWrap="wrap" gap={2}>
-        <Typography variant="h4">Upload File QR Codes</Typography>
+    <Container maxWidth="xl" disableGutters={false} sx={{ px: { xs: 0, sm: 0 } }}>
+      <ListPageHeader
+        title="Upload File QR Codes"
+        actions={
+          <>
+            <TextField
+              size="small"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Search ID, name, or file name…"
+              sx={{
+                width: { xs: '100%', sm: 240, md: 280 },
+                minWidth: { sm: 200 },
+                flex: { xs: '1 1 100%', sm: '0 1 auto' },
+              }}
+            />
 
-        <Stack direction="row" alignItems="center" gap={1.5} flexWrap="wrap" justifyContent="flex-end">
-          <TextField
-            size="small"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Search ID, name, or file name…"
-            sx={{ minWidth: { xs: '100%', sm: 280 } }}
-          />
+            <IconButton
+              title={advancedFilterOpen ? 'Hide filters' : 'Show filters'}
+              color={advancedFilterOpen || hasAdvancedFilter ? 'primary' : 'default'}
+              onClick={() => setAdvancedFilterOpen((open) => !open)}
+              sx={{
+                border: (t) => `1px solid ${t.palette.divider}`,
+                borderRadius: 1,
+                width: 40,
+                height: 40,
+              }}
+            >
+              <Iconify icon="eva:funnel-fill" />
+            </IconButton>
 
-          <IconButton
-            title={advancedFilterOpen ? 'Hide filters' : 'Show filters'}
-            color={advancedFilterOpen || hasAdvancedFilter ? 'primary' : 'default'}
-            onClick={() => setAdvancedFilterOpen((open) => !open)}
-            sx={{
-              border: (theme) => `1px solid ${theme.palette.divider}`,
-              borderRadius: 1,
-              width: 40,
-              height: 40,
-            }}
-          >
-            <Iconify icon="eva:funnel-fill" />
-          </IconButton>
-
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => setCreateOpen(true)}
-          >
-            Create QR Code
-          </Button>
-        </Stack>
-      </Stack>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => setCreateOpen(true)}
+              sx={{ flex: { xs: 1, sm: 'none' }, whiteSpace: 'nowrap' }}
+            >
+              {isMobile ? 'Create' : 'Create QR Code'}
+            </Button>
+          </>
+        }
+      />
 
       <Card>
         <Collapse in={advancedFilterOpen}>
@@ -296,101 +427,132 @@ export default function UploadFileList() {
           />
         </Collapse>
 
-        <Scrollbar>
-          <TableContainer sx={{ overflow: 'unset' }}>
-            <Table sx={{ minWidth: admin ? 1200 : 1080 }}>
-              <TableHead>
-                <TableRow>
-                  {columns.map((col) => (
-                    <TableCell key={col.id}>{col.label}</TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {items.length === 0 ? (
+        {isMobile ? (
+          <Box>
+            {items.length === 0 ? (
+              <Box sx={{ py: 6, px: 2, textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                  No QR codes found
+                </Typography>
+              </Box>
+            ) : (
+              items.map((row) => (
+                <MobileQrCard
+                  key={row.id}
+                  row={row}
+                  admin={admin}
+                  onView={setViewItem}
+                  onViewFile={(item) => handleFileAction(item, 'view')}
+                  onDownloadFile={(item) => handleFileAction(item, 'download')}
+                  onDownloadQr={handleDownloadQr}
+                  onEdit={setEditItem}
+                  onDelete={setDeleteItem}
+                />
+              ))
+            )}
+          </Box>
+        ) : (
+          <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table sx={{ minWidth: admin ? 1200 : 1080 }}>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={columns.length} align="center" sx={{ py: 5 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        No QR codes found
-                      </Typography>
-                    </TableCell>
+                    {columns.map((col) => (
+                      <TableCell key={col.id}>{col.label}</TableCell>
+                    ))}
                   </TableRow>
-                ) : (
-                  items.map((row) => (
-                    <TableRow key={row.id} hover>
-                      <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{row.code}</TableCell>
-                      <TableCell>{row.name}</TableCell>
-                      <TableCell sx={{ maxWidth: 180 }}>
-                        <Typography variant="body2" noWrap title={row.static_url}>
-                          {row.static_url}
+                </TableHead>
+                <TableBody>
+                  {items.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} align="center" sx={{ py: 5 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          No QR codes found
                         </Typography>
-                      </TableCell>
-                      <TableCell sx={{ maxWidth: 160 }}>
-                        <Typography variant="body2" noWrap title={row.original_name}>
-                          {row.original_name}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          size="small"
-                          label={formatAccessMode(row.access_mode)}
-                          color={row.access_mode === 'download' ? 'warning' : 'info'}
-                          variant="soft"
-                        />
-                      </TableCell>
-                      {admin && <TableCell>{row.created_by || '—'}</TableCell>}
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatQrDate(row.created_at)}</TableCell>
-                      <TableCell>
-                        <Stack direction="row" spacing={0.5}>
-                          <IconButton size="small" title="View QR" onClick={() => setViewItem(row)}>
-                            <Iconify icon="solar:eye-bold" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            title="View file"
-                            onClick={() => handleFileAction(row, 'view')}
-                          >
-                            <Iconify icon="solar:document-bold" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            title="Download file"
-                            onClick={() => handleFileAction(row, 'download')}
-                          >
-                            <Iconify icon="eva:download-outline" />
-                          </IconButton>
-                          <IconButton size="small" title="Download QR" onClick={() => handleDownloadQr(row)}>
-                            <Iconify icon="mdi:qrcode" />
-                          </IconButton>
-                          <IconButton size="small" title="Edit" onClick={() => setEditItem(row)}>
-                            <Iconify icon="solar:pen-bold" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            title="Delete"
-                            onClick={() => setDeleteItem(row)}
-                          >
-                            <Iconify icon="solar:trash-bin-trash-bold" />
-                          </IconButton>
-                        </Stack>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Scrollbar>
+                  ) : (
+                    items.map((row) => (
+                      <TableRow key={row.id} hover>
+                        <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{row.code}</TableCell>
+                        <TableCell>{row.name}</TableCell>
+                        <TableCell sx={{ maxWidth: 180 }}>
+                          <Typography variant="body2" noWrap title={row.static_url}>
+                            {row.static_url}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ maxWidth: 160 }}>
+                          <Typography variant="body2" noWrap title={row.original_name}>
+                            {row.original_name}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            label={formatAccessMode(row.access_mode)}
+                            color={row.access_mode === 'download' ? 'warning' : 'info'}
+                            variant="soft"
+                          />
+                        </TableCell>
+                        {admin && <TableCell>{row.created_by || '—'}</TableCell>}
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatQrDate(row.created_at)}</TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                            <IconButton size="small" title="View QR" onClick={() => setViewItem(row)}>
+                              <Iconify icon="solar:eye-bold" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              title="View file"
+                              onClick={() => handleFileAction(row, 'view')}
+                            >
+                              <Iconify icon="solar:document-bold" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              title="Download file"
+                              onClick={() => handleFileAction(row, 'download')}
+                            >
+                              <Iconify icon="eva:download-outline" />
+                            </IconButton>
+                            <IconButton size="small" title="Download QR" onClick={() => handleDownloadQr(row)}>
+                              <Iconify icon="mdi:qrcode" />
+                            </IconButton>
+                            <IconButton size="small" title="Edit" onClick={() => setEditItem(row)}>
+                              <Iconify icon="solar:pen-bold" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              title="Delete"
+                              onClick={() => setDeleteItem(row)}
+                            >
+                              <Iconify icon="solar:trash-bin-trash-bold" />
+                            </IconButton>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+        )}
+
+        <Divider />
 
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
-          alignItems="center"
+          alignItems={{ xs: 'stretch', sm: 'center' }}
           justifyContent="space-between"
           spacing={2}
-          sx={{ p: 2 }}
+          sx={{ p: { xs: 1.5, sm: 2 } }}
         >
-          <Stack direction="row" alignItems="center" spacing={2}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent={{ xs: 'space-between', sm: 'flex-start' }}
+            spacing={2}
+          >
             <Typography variant="body2" color="text.secondary">
               Total: {info.total || 0}
             </Typography>
@@ -404,7 +566,7 @@ export default function UploadFileList() {
               >
                 {[10, 25, 50, 100].map((n) => (
                   <MenuItem key={n} value={n}>
-                    {n}
+                    {n} / page
                   </MenuItem>
                 ))}
               </Select>
@@ -415,6 +577,9 @@ export default function UploadFileList() {
             page={page}
             onChange={(_, value) => setPage(value)}
             color="primary"
+            size={isMobile ? 'small' : 'medium'}
+            siblingCount={isMobile ? 0 : 1}
+            sx={{ display: 'flex', justifyContent: { xs: 'center', sm: 'flex-end' } }}
           />
         </Stack>
       </Card>
@@ -444,16 +609,32 @@ export default function UploadFileList() {
         saving={saving}
       />
 
-      <Dialog open={Boolean(deleteItem)} onClose={() => setDeleteItem(null)}>
-        <DialogTitle>Delete QR Code</DialogTitle>
+      <Dialog
+        open={Boolean(deleteItem)}
+        onClose={() => setDeleteItem(null)}
+        fullScreen={fullScreenDialog}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{
+          sx: { m: { xs: 0, sm: 2 } },
+        }}
+      >
+        <DialogTitle sx={{ fontSize: { xs: '1.15rem', sm: '1.25rem' } }}>Delete QR Code</DialogTitle>
         <DialogContent>
           <Typography variant="body2">
             Delete <strong>{deleteItem?.code}</strong> and its uploaded file? This cannot be undone.
           </Typography>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteItem(null)}>Cancel</Button>
-          <Button color="error" variant="contained" onClick={handleDelete}>
+        <DialogActions sx={RESPONSIVE_DIALOG_ACTIONS_SX}>
+          <Button onClick={() => setDeleteItem(null)} fullWidth={fullScreenDialog}>
+            Cancel
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleDelete}
+            fullWidth={fullScreenDialog}
+          >
             Delete
           </Button>
         </DialogActions>

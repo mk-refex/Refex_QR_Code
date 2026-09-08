@@ -12,8 +12,9 @@ export default function Main({ children, sx, ...other }) {
         flexGrow: 1,
         minWidth: 0,
         width: '100%',
-        px: { xs: 2, md: 3 },
-        py: 2,
+        px: { xs: 1.5, sm: 2, md: 3 },
+        pt: { xs: 1.5, sm: 2 },
+        pb: { xs: 3, sm: 2 },
         ...sx,
       }}
       {...other}

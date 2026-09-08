@@ -14,18 +14,20 @@ export function overrides(theme) {
           margin: 0,
           padding: 0,
           width: '100%',
-          height: '100%',
+          minHeight: '100%',
+          overflowX: 'hidden',
+          overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
         },
         body: {
           margin: 0,
           padding: 0,
           width: '100%',
-          height: '100%',
+          minHeight: '100%',
         },
         '#root': {
           width: '100%',
-          height: '100%',
+          minHeight: '100%',
         },
         input: {
           '&[type=number]': {

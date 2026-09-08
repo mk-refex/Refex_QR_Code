@@ -21,7 +21,7 @@ export default function UserLayout({ children }) {
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100vh',
+        minHeight: { xs: '100dvh', sm: '100vh' },
         width: '100%',
       }}
     >
@@ -36,8 +36,8 @@ export default function UserLayout({ children }) {
           pt: `${headerHeight}px`,
         }}
       >
-        <Main>{children}</Main>
-        <Footer sx={{ py: 2 }} />
+        <Main sx={{ flex: '1 0 auto' }}>{children}</Main>
+        <Footer />
       </Box>
     </Box>
   );
