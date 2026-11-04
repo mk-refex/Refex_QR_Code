@@ -335,28 +335,33 @@ function buildEmptyHelp_() {
 
 function callIssueApi_(name, phone) {
   var props = PropertiesService.getScriptProperties();
-  var apiKey = props.getProperty('WINTER_SPIN_API_KEY');
-  var issueUrl = props.getProperty('WINTER_SPIN_ISSUE_URL');
+  var apiKey = String(props.getProperty('WINTER_SPIN_API_KEY') || '').trim();
+  var issueUrl = String(props.getProperty('WINTER_SPIN_ISSUE_URL') || '').trim();
   if (!apiKey || !issueUrl) throw new Error('Set WINTER_SPIN_API_KEY and WINTER_SPIN_ISSUE_URL.');
   if (/localhost|127\.0\.0\.1/i.test(issueUrl)) {
     throw new Error('Issue URL cannot be localhost. Use public HTTPS API.');
   }
 
-  // Send key in header AND body (some hosts strip X-API-Key)
+  // Match Postman: JSON body + API key in several places (CDN may strip some headers)
+  var payload = {
+    name: name,
+    phone: phone,
+    apiKey: apiKey,
+    api_key: apiKey,
+  };
+
   var res = UrlFetchApp.fetch(issueUrl, {
     method: 'post',
     contentType: 'application/json',
     headers: {
+      Accept: 'application/json',
       'X-API-Key': apiKey,
-      'x-api-key': apiKey,
+      'Api-Key': apiKey,
+      Authorization: 'Bearer ' + apiKey,
     },
-    payload: JSON.stringify({
-      name: name,
-      phone: phone,
-      apiKey: apiKey,
-      api_key: apiKey,
-    }),
+    payload: JSON.stringify(payload),
     muteHttpExceptions: true,
+    followRedirects: true,
   });
 
   var code = res.getResponseCode();
@@ -368,11 +373,29 @@ function callIssueApi_(name, phone) {
     throw new Error('Issue API non-JSON (' + code + '): ' + text.slice(0, 250));
   }
   if (code < 200 || code >= 300 || !body.status) {
-    throw new Error('Issue API failed (' + code + '): ' + (body.message || text));
+    throw new Error(
+      'Issue API failed (' +
+        code +
+        '): ' +
+        (body.message || text) +
+        ' | keyLen=' +
+        apiKey.length +
+        ' | url=' +
+        issueUrl
+    );
   }
   var r = body.results || {};
   if (!r.token || !r.spinUrl) throw new Error('Issue API missing token/spinUrl');
   return { token: r.token, spinUrl: r.spinUrl };
+}
+
+/**
+ * Run this from the Apps Script editor (Run → testIssueApiFromScript)
+ * to verify the key/URL without submitting the Form.
+ */
+function testIssueApiFromScript() {
+  var result = callIssueApi_('Script Test', '9000000001');
+  Logger.log(JSON.stringify(result, null, 2));
 }
 
 function remember_(spinUrl, phone, email) {

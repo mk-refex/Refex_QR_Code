@@ -394,7 +394,13 @@ async function issueSpinToken({ name, phone, apiKey }) {
     };
   }
   if (!isIssueApiKeyValid(apiKey)) {
-    return { ok: false, status: 401, message: "Unauthorized." };
+    const gotLen = String(apiKey || "").trim().length;
+    const needLen = String(ISSUE_API_KEY || "").trim().length;
+    return {
+      ok: false,
+      status: 401,
+      message: `Unauthorized. API key mismatch (received length ${gotLen}, expected length ${needLen}). Use the same WINTER_SPIN_API_KEY as the server.`,
+    };
   }
 
   const cleanName = normalizeName(name);

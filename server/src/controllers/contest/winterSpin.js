@@ -10,13 +10,27 @@ function clientIp(req) {
 }
 
 function extractApiKey(req) {
-  const header = req.headers["x-api-key"] || req.headers["x-winter-spin-key"] || "";
-  if (header) return String(header);
-  const auth = req.headers.authorization || "";
-  if (auth.toLowerCase().startsWith("bearer ")) {
-    return auth.slice(7).trim();
+  const headers = req.headers || {};
+  const header =
+    headers["x-api-key"] ||
+    headers["x-api_key"] ||
+    headers["api-key"] ||
+    headers["apikey"] ||
+    headers["x-winter-spin-key"] ||
+    "";
+  if (header) return String(header).trim();
+
+  const auth = String(headers.authorization || headers.Authorization || "").trim();
+  if (!auth) {
+    return String(req.body?.apiKey || req.body?.api_key || req.query?.apiKey || "").trim();
   }
-  return req.body?.apiKey || req.body?.api_key || "";
+
+  const lower = auth.toLowerCase();
+  if (lower.startsWith("bearer ")) return auth.slice(7).trim();
+  if (lower.startsWith("apikey ")) return auth.slice(7).trim();
+  if (lower.startsWith("api-key ")) return auth.slice(8).trim();
+  // Raw key in Authorization header
+  return auth;
 }
 
 module.exports = {
