@@ -17,6 +17,9 @@ const PUBLIC_BASE_URL = (
   "http://localhost:3030"
 ).replace(/\/$/, "");
 
+/** Optional Apps Script Web App URL — updates SpinAllow prize after spin. */
+const SHEET_WEBAPP_URL = (process.env.WINTER_SPIN_SHEET_WEBAPP_URL || "").trim();
+
 /**
  * Refex Winter Campaign — prize catalog & weekly caps (IST weeks).
  *
@@ -576,6 +579,18 @@ async function spinOnce({ name, phone, token, ip, userAgent }) {
       return { alreadySpun: false, entry, prize };
     });
 
+    // Fire-and-forget: update same SpinAllow row with prize
+    if (!result.alreadySpun && result.entry) {
+      syncPrizeToSheet_({
+        phone: result.entry.phone,
+        token: result.entry.token,
+        prize: result.entry.prizeLabel,
+        prizeCode: result.entry.prizeCode,
+      }).catch((err) => {
+        console.warn("Winter spin Sheet prize sync skipped:", err.message);
+      });
+    }
+
     return {
       ok: true,
       alreadySpun: result.alreadySpun,
@@ -600,6 +615,29 @@ async function spinOnce({ name, phone, token, ip, userAgent }) {
       }
     }
     throw error;
+  }
+}
+
+async function syncPrizeToSheet_({ phone, token, prize, prizeCode }) {
+  if (!SHEET_WEBAPP_URL || !ISSUE_API_KEY) return;
+
+  const res = await fetch(SHEET_WEBAPP_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "updatePrize",
+      apiKey: ISSUE_API_KEY,
+      phone,
+      token,
+      prize,
+      prizeCode,
+      status: "spun",
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Sheet webapp HTTP ${res.status}: ${text.slice(0, 200)}`);
   }
 }
 
