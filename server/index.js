@@ -48,6 +48,7 @@ app.use(
   require("./src/routes/uploadFileQr"),
   require("./src/routes/designQr"),
   require("./src/routes/contest/contestForm"),
+  require("./src/routes/contest/winterSpin"),
   require("./src/routes/brochure/brochure_download")
 );
 
@@ -132,6 +133,20 @@ sequelize
       }
     } catch (e) {
       console.warn("User schema check skipped:", e.message);
+    }
+
+    try {
+      const qi = sequelize.getQueryInterface();
+      const spinTable = await qi.describeTable("winter_spin_entries");
+      if (!spinTable.token) {
+        await qi.addColumn("winter_spin_entries", "token", {
+          type: Sequelize.DataTypes.STRING(255),
+          allowNull: true,
+        });
+        console.log("Added winter_spin_entries.token column");
+      }
+    } catch (e) {
+      console.warn("Winter spin schema check skipped:", e.message);
     }
 
     try {

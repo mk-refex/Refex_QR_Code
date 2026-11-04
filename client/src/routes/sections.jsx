@@ -9,6 +9,7 @@ import { getDefaultRoute, hasRole, ADMIN_ROLES } from 'src/utils/roles';
 
 export const BrochureFormPage = lazy(() => import('src/pages/brochure-form'));
 export const ContestFormPage = lazy(() => import('src/pages/contest-form'));
+export const WinterSpinPage = lazy(() => import('src/pages/winter-spin'));
 export const BrochureDownloadForm = lazy(() => import('src/pages/brochure-download'));
 export const QRCodeLinkPage = lazy(() => import('src/pages/qr-code-link'));
 export const InstaLinkPage = lazy(() => import('src/pages/qr-insta'));
@@ -145,7 +146,12 @@ export default function Router() {
       children: [
         { element: <Navigate to="/airport/fly_buy_summer" />, index: true },
         { path: 'fly_buy_summer', element: <ContestFormPage /> },
+        { path: 'winter_campaign', element: <WinterSpinPage /> },
       ],
+    },
+    {
+      path: 'winter-spin',
+      element: <WinterSpinPage />,
     },
     {
       path: 'brochure_form',
