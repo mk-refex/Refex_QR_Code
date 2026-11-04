@@ -376,8 +376,8 @@ async function assertValidIssuedToken({ token, phone, name, forSpin = false }) {
 
 function isIssueApiKeyValid(providedKey) {
   if (!ISSUE_API_KEY) return false;
-  const a = Buffer.from(String(providedKey || ""));
-  const b = Buffer.from(ISSUE_API_KEY);
+  const a = Buffer.from(String(providedKey || "").trim());
+  const b = Buffer.from(String(ISSUE_API_KEY).trim());
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);
 }
@@ -579,13 +579,14 @@ async function spinOnce({ name, phone, token, ip, userAgent }) {
       return { alreadySpun: false, entry, prize };
     });
 
-    // Fire-and-forget: update same SpinAllow row with prize
+    // After spin completes: update same SpinAllow row with gift/prize
     if (!result.alreadySpun && result.entry) {
+      const entry = result.entry;
       syncPrizeToSheet_({
-        phone: result.entry.phone,
-        token: result.entry.token,
-        prize: result.entry.prizeLabel,
-        prizeCode: result.entry.prizeCode,
+        phone: entry.phone,
+        token: entry.token,
+        prize: entry.prize_label || entry.prizeLabel,
+        prizeCode: entry.prize_code || entry.prizeCode,
       }).catch((err) => {
         console.warn("Winter spin Sheet prize sync skipped:", err.message);
       });
@@ -618,27 +619,48 @@ async function spinOnce({ name, phone, token, ip, userAgent }) {
   }
 }
 
+/**
+ * After spin: update SpinAllow Status=spun + Prize (gift) on the same row.
+ * Uses GET query (Apps Script Web App POST redirects are unreliable from Node).
+ */
 async function syncPrizeToSheet_({ phone, token, prize, prizeCode }) {
-  if (!SHEET_WEBAPP_URL || !ISSUE_API_KEY) return;
-
-  const res = await fetch(SHEET_WEBAPP_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      action: "updatePrize",
-      apiKey: ISSUE_API_KEY,
-      phone,
-      token,
-      prize,
-      prizeCode,
-      status: "spun",
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Sheet webapp HTTP ${res.status}: ${text.slice(0, 200)}`);
+  if (!SHEET_WEBAPP_URL || !ISSUE_API_KEY) {
+    console.warn(
+      "Winter spin Sheet prize sync skipped: set WINTER_SPIN_SHEET_WEBAPP_URL and WINTER_SPIN_API_KEY"
+    );
+    return;
   }
+
+  const url = new URL(SHEET_WEBAPP_URL);
+  url.searchParams.set("action", "updatePrize");
+  url.searchParams.set("apiKey", ISSUE_API_KEY);
+  if (phone) url.searchParams.set("phone", phone);
+  if (token) url.searchParams.set("token", token);
+  if (prize) url.searchParams.set("prize", prize);
+  if (prizeCode) url.searchParams.set("prizeCode", prizeCode);
+  url.searchParams.set("status", "spun");
+
+  const res = await fetch(url.toString(), { method: "GET", redirect: "follow" });
+  const text = await res.text();
+  let body = null;
+  try {
+    body = JSON.parse(text);
+  } catch (_) {
+    // Apps Script sometimes wraps JSON; try to detect failure from status
+  }
+
+  if (!res.ok || (body && body.ok === false)) {
+    throw new Error(
+      `Sheet gift update failed: ${body?.message || text.slice(0, 200) || res.status}`
+    );
+  }
+
+  console.log(
+    "Winter spin Sheet gift updated:",
+    phone,
+    prizeCode || prize,
+    body?.row != null ? `row ${body.row}` : ""
+  );
 }
 
 module.exports = {
