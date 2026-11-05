@@ -19,11 +19,13 @@ const PUBLIC_BASE_URL = (
 ).replace(/\/$/, "");
 
 /**
- * Refex Winter Campaign — prize catalog & weekly caps (IST weeks).
+ * Refex Winter Campaign — weekly prize inventory (IST Monday–Sunday).
  *
- * Most spins land on Better Luck Next Time.
- * Cash prizes are rare, weekly-capped, and paced so they can fall on any day
- * (not burned on Monday). Bumper is unlimited but still uncommon.
+ * Each new week starts again at the same quantities:
+ *   ₹2,000 × 2, ₹5,000 × 2, ₹7,000 × 1, ₹10,000 × 1.
+ * Every other spin is an independent coin flip between Better Luck Next Time
+ * and Eligible for Bumper Prize through Lucky Draw. There is no fixed count
+ * for either of those.
  */
 const PRIZES = [
   {
@@ -32,7 +34,6 @@ const PRIZES = [
     shortLabel: "Better Luck Next Time",
     isWin: false,
     weeklyCap: null,
-    weight: 900,
   },
   {
     code: "win_2000",
@@ -40,7 +41,6 @@ const PRIZES = [
     shortLabel: "Win up to ₹2,000",
     isWin: true,
     weeklyCap: 2,
-    weight: 12,
   },
   {
     code: "win_5000",
@@ -48,7 +48,6 @@ const PRIZES = [
     shortLabel: "Win up to ₹5,000",
     isWin: true,
     weeklyCap: 2,
-    weight: 8,
   },
   {
     code: "win_7000",
@@ -56,7 +55,6 @@ const PRIZES = [
     shortLabel: "Win up to ₹7,000",
     isWin: true,
     weeklyCap: 1,
-    weight: 5,
   },
   {
     code: "win_10000",
@@ -64,7 +62,6 @@ const PRIZES = [
     shortLabel: "Win up to ₹10,000",
     isWin: true,
     weeklyCap: 1,
-    weight: 3,
   },
   {
     code: "bumper",
@@ -72,7 +69,6 @@ const PRIZES = [
     shortLabel: "Bumper Prize Lucky Draw",
     isWin: true,
     weeklyCap: null,
-    weight: 72,
   },
 ];
 
@@ -81,11 +77,12 @@ const PRIZE_BY_CODE = Object.fromEntries(PRIZES.map((p) => [p.code, p]));
 const CAMPAIGN_END = process.env.WINTER_SPIN_END_DATE || "2027-01-15";
 const CAMPAIGN_START = process.env.WINTER_SPIN_START_DATE || "2026-11-01";
 
-/** First-roll: % of spins that instantly become Better Luck (before secondary lottery). */
-const BETTER_LUCK_FLOOR_PCT = Number(process.env.WINTER_SPIN_BETTER_LUCK_PCT || 88);
-
-/** Estimated spins/day — used only to pace remaining weekly cash prizes across remaining days. */
+/**
+ * Opening estimate of spins per day, used only until this week has a real sample.
+ * After that, the week's own pace spreads the six cash prizes across the days left.
+ */
 const EST_SPINS_PER_DAY = Number(process.env.WINTER_SPIN_EST_SPINS_PER_DAY || 50);
+const PACE_SAMPLE_SPINS = 8;
 
 function getIstParts(date = new Date()) {
   const fmt = new Intl.DateTimeFormat("en-CA", {
@@ -218,19 +215,36 @@ function getRemainingDaysInWeek(date = new Date()) {
 }
 
 /**
- * Soft random gate so remaining weekly cash slots can land on any remaining day.
- * Early-week spins mostly skip cash; late-week unused slots become more likely.
+ * Spins still expected after this one. Sunday (or the last day) returns 0 so
+ * any cash still in stock is awarded before the week ends. A brand-new week
+ * uses the daily estimate; once eight people have spun, the week's own rate
+ * takes over and a quiet week still gives out its six cash prizes.
  */
-function pacingAllowsCappedPrize(remainingSlots, remainingDays) {
+function expectedFutureSpins(spinsSoFar, date = new Date()) {
+  const futureDays = Math.max(0, getRemainingDaysInWeek(date) - 1);
+  if (futureDays === 0) return 0;
+
+  const prior = Math.max(1, EST_SPINS_PER_DAY);
+  if (spinsSoFar < PACE_SAMPLE_SPINS) return futureDays * prior;
+
+  const observed = spinsSoFar / Math.max(1, getIstWeekdayNumber(date));
+  return futureDays * Math.max(1, observed);
+}
+
+/** True when this spin should take one of the week's remaining cash slots. */
+function shouldAwardCash(remainingSlots, spinsSoFar, date = new Date()) {
   if (remainingSlots <= 0) return false;
-  const estSpinsLeft = Math.max(
-    remainingSlots,
-    remainingDays * Math.max(1, EST_SPINS_PER_DAY)
-  );
-  const probability = remainingSlots / estSpinsLeft;
+  const horizon = expectedFutureSpins(spinsSoFar, date) + 1;
+  const probability = Math.min(1, remainingSlots / horizon);
   const scale = 1_000_000;
-  const threshold = Math.max(1, Math.floor(probability * scale));
+  const threshold = Math.floor(probability * scale);
   return crypto.randomInt(0, scale) < threshold;
+}
+
+function pickOpenOutcome() {
+  return crypto.randomInt(0, 2) === 0
+    ? PRIZE_BY_CODE.better_luck
+    : PRIZE_BY_CODE.bumper;
 }
 
 async function ensureWeeklyStock(weekKey, transaction) {
@@ -252,30 +266,6 @@ async function ensureWeeklyStock(weekKey, transaction) {
   }
 }
 
-async function getAvailablePrizes(weekKey, transaction) {
-  await ensureWeeklyStock(weekKey, transaction);
-
-  const stocks = await WinterSpinWeeklyStock.findAll({
-    where: { week_key: weekKey },
-    transaction,
-    lock: transaction.LOCK.UPDATE,
-  });
-  const usedByCode = Object.fromEntries(
-    stocks.map((s) => [s.prize_code, { used: s.used, cap: s.cap }])
-  );
-  const remainingDays = getRemainingDaysInWeek();
-
-  return PRIZES.filter((prize) => {
-    if (prize.weeklyCap == null) return true;
-    const stock = usedByCode[prize.code];
-    if (!stock) return true;
-    const remaining = stock.cap - stock.used;
-    if (remaining <= 0) return false;
-    // Random day pacing — prize can appear any day, not all at once
-    return pacingAllowsCappedPrize(remaining, remainingDays);
-  }).map((prize) => ({ ...prize }));
-}
-
 async function consumeWeeklyStock(weekKey, prizeCode, transaction) {
   const prize = PRIZE_BY_CODE[prizeCode];
   if (!prize || prize.weeklyCap == null) return true;
@@ -295,34 +285,39 @@ async function consumeWeeklyStock(weekKey, prizeCode, transaction) {
 }
 
 async function pickSecurePrize(weekKey, transaction) {
-  // 1) Most spins → Better Luck Next Time (secure floor)
-  const floor = Math.min(99, Math.max(0, BETTER_LUCK_FLOOR_PCT));
-  if (crypto.randomInt(0, 100) < floor) {
-    return PRIZE_BY_CODE.better_luck;
-  }
+  await ensureWeeklyStock(weekKey, transaction);
 
-  // 2) Secondary lottery among bumper + paced cash (and better_luck still in pool)
-  let available = await getAvailablePrizes(weekKey, transaction);
-  if (!available.length) {
-    return PRIZE_BY_CODE.better_luck;
-  }
+  const stocks = await WinterSpinWeeklyStock.findAll({
+    where: { week_key: weekKey },
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+  const spinsSoFar = await WinterSpinEntry.count({
+    where: { week_key: weekKey },
+    transaction,
+  });
 
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const picked = cryptoWeightedPick(available);
-    if (!picked) break;
+  let cashChoices = stocks
+    .map((row) => ({
+      prize: PRIZE_BY_CODE[row.prize_code],
+      weight: Number(row.cap) - Number(row.used),
+    }))
+    .filter((row) => row.prize && row.prize.weeklyCap != null && row.weight > 0);
 
-    if (picked.weeklyCap == null) {
-      return picked;
+  const remainingSlots = cashChoices.reduce((sum, row) => sum + row.weight, 0);
+
+  if (shouldAwardCash(remainingSlots, spinsSoFar)) {
+    for (let attempt = 0; attempt < cashChoices.length; attempt += 1) {
+      const picked = cryptoWeightedPick(cashChoices);
+      if (!picked?.prize) break;
+      const ok = await consumeWeeklyStock(weekKey, picked.prize.code, transaction);
+      if (ok) return picked.prize;
+      cashChoices = cashChoices.filter((row) => row.prize.code !== picked.prize.code);
+      if (!cashChoices.length) break;
     }
-
-    const ok = await consumeWeeklyStock(weekKey, picked.code, transaction);
-    if (ok) return picked;
-
-    available = available.filter((p) => p.code !== picked.code);
-    if (!available.length) break;
   }
 
-  return PRIZE_BY_CODE.better_luck;
+  return pickOpenOutcome();
 }
 
 /**
@@ -638,7 +633,11 @@ async function spinOnce({ name, phone, token, ip, userAgent }) {
     });
 
     if (!result.alreadySpun && result.entry && !result.entry.is_win) {
-      await winterCampaignEmailService.sendThankYouOnce(cleanPhone);
+      try {
+        await winterCampaignEmailService.sendThankYouOnce(cleanPhone);
+      } catch (mailError) {
+        console.error("Winter campaign thank-you email failed:", mailError.message);
+      }
     }
 
     return {

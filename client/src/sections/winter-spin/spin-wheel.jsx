@@ -154,9 +154,9 @@ export default function SpinWheel({
     <Box
       sx={{
         position: 'relative',
-        width: size,
-        height: size,
-        maxWidth: '100%',
+        width: '100%',
+        maxWidth: size,
+        aspectRatio: '1 / 1',
         mx: 'auto',
         filter: 'drop-shadow(0 18px 40px rgba(7,26,46,0.4))',
       }}
@@ -198,9 +198,8 @@ export default function SpinWheel({
       <canvas
         ref={canvasRef}
         style={{
-          width: size,
-          height: size,
-          maxWidth: '100%',
+          width: '100%',
+          height: '100%',
           borderRadius: '50%',
           position: 'relative',
           zIndex: 1,

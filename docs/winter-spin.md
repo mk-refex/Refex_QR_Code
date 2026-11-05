@@ -70,12 +70,12 @@ Week = **Monday–Sunday (Asia/Kolkata)**. Caps reset automatically each Monday 
 
 When a capped category is exhausted for the week, it is no longer awarded until the next Monday.
 
-### Allocation logic (secure)
+### Allocation logic
 
 - Prize is chosen **only on the server** (`crypto.randomInt`). The wheel only animates to that result.
-- **~88%** of spins go to **Better Luck Next Time** first (configurable).
-- Remaining spins enter a small lottery (mostly bumper; cash is rare).
-- Cash prizes are **paced** so remaining weekly slots can fall on **any day**, not all early in the week.
+- Each week has exactly six cash prizes: 2 × ₹2,000, 2 × ₹5,000, 1 × ₹7,000, 1 × ₹10,000.
+- Those six are spread across the week. On Sunday any cash still left is given out. Monday opens a fresh week with the same quantities.
+- Every spin that does not take a cash prize is a fair random choice between **Better Luck Next Time** and **Eligible for Bumper Prize through Lucky Draw**. Neither has a fixed count.
 - Inventory is stored in `winter_spin_weekly_stock` and updated atomically (`used < cap`).
 
 ---
@@ -158,8 +158,7 @@ Set on the **server**:
 | `WINTER_SPIN_TOKEN_TTL_HOURS` | `72` | How long an issued link stays valid |
 | `WINTER_SPIN_START_DATE` | `2026-11-01` | Campaign start (IST date `YYYY-MM-DD`) |
 | `WINTER_SPIN_END_DATE` | `2027-01-15` | Campaign end (Pongal window) |
-| `WINTER_SPIN_BETTER_LUCK_PCT` | `88` | % of spins forced to Better Luck |
-| `WINTER_SPIN_EST_SPINS_PER_DAY` | `50` | Used only for cash prize day-pacing |
+| `WINTER_SPIN_EST_SPINS_PER_DAY` | `50` | Opening daily estimate used to spread the six cash prizes until the week has its own pace |
 
 ---
 

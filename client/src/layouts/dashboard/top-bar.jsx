@@ -104,7 +104,8 @@ function SectionNavMenu({ items, pathname }) {
         endIcon={<Iconify icon={open ? 'eva:chevron-up-fill' : 'eva:chevron-down-fill'} width={16} />}
         startIcon={<Iconify icon="eva:menu-2-outline" width={18} />}
         sx={{
-          maxWidth: { xs: 160, sm: 200 },
+          width: { xs: 1, sm: 'auto' },
+          maxWidth: 1,
           color: '#2879b6',
           border: (theme) => `1px solid ${theme.palette.divider}`,
           borderRadius: 1,
@@ -204,19 +205,22 @@ export default function TopBar({ onToggleNav, showMenuButton = false, navItems }
           sx={{
             mt: { xs: -0.5, md: -1.25 },
             flexShrink: 0,
-            height: { xs: 34, sm: 40, md: 44 },
+            height: { xs: 28, sm: 40, md: 44 },
+            width: 'auto',
+            maxWidth: { xs: 108, sm: 168 },
+            objectFit: 'contain',
           }}
         />
 
         {mdUp ? (
           <SectionNavLinks items={items} pathname={pathname} />
         ) : (
-          <Box sx={{ ml: { xs: 0.5, sm: 1 }, minWidth: 0 }}>
+          <Box sx={{ ml: 0.5, minWidth: 0, flex: '1 1 auto', overflow: 'hidden' }}>
             <SectionNavMenu items={items} pathname={pathname} />
           </Box>
         )}
 
-        <Box sx={{ flexGrow: 1, minWidth: 8 }} />
+        <Box sx={{ flexGrow: 1, minWidth: 8, display: { xs: 'none', md: 'block' } }} />
 
         <AccountPopover />
       </Toolbar>

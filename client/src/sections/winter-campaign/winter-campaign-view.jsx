@@ -254,14 +254,14 @@ export default function WinterCampaignView() {
       }}
     >
       <Stack spacing={3} sx={{ maxWidth: 920, mx: 'auto', px: { xs: 2, sm: 3 }, py: { xs: 3, md: 5 } }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ minWidth: 0 }}>
           <Box
             component="img"
             alt="Refex"
             src="/assets/refex-logo.png"
-            sx={{ height: 42, width: 'auto', objectFit: 'contain' }}
+            sx={{ height: { xs: 32, sm: 42 }, width: 'auto', maxWidth: { xs: '62%', sm: 240 }, objectFit: 'contain' }}
           />
-          <Typography variant="overline" sx={{ color: BRAND.gold, letterSpacing: 1.4 }}>
+          <Typography variant="overline" sx={{ color: BRAND.gold, letterSpacing: { xs: 0.8, sm: 1.4 }, flexShrink: 0 }}>
             Pune Airport
           </Typography>
         </Stack>
@@ -390,7 +390,7 @@ export default function WinterCampaignView() {
                 />
               }
               label={
-                <Typography variant="body2" sx={{ color: alpha('#fff', 0.88) }}>
+                <Typography variant="body2" sx={{ color: alpha('#fff', 0.88), wordBreak: 'break-word' }}>
                   {CONSENT_TEXT} *
                 </Typography>
               }
@@ -468,19 +468,20 @@ export default function WinterCampaignView() {
                 variant="outlined"
                 component="label"
                 disabled={loading}
-                sx={{ alignSelf: 'flex-start', color: '#fff', borderColor: alpha('#fff', 0.3) }}
+                sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' }, color: '#fff', borderColor: alpha('#fff', 0.3) }}
               >
                 Add file
                 <input hidden multiple type="file" accept="image/*,.pdf,.heic,.heif" onChange={onPickFiles} />
               </Button>
               {files.map((file) => (
-                <Stack key={`${file.name}-${file.size}`} direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body2" noWrap sx={{ maxWidth: '75%' }}>
+                <Stack key={`${file.name}-${file.size}`} direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" noWrap sx={{ flex: 1, minWidth: 0 }}>
                     {file.name}
                   </Typography>
                   <Button
                     size="small"
                     color="inherit"
+                    sx={{ flexShrink: 0 }}
                     onClick={() => setFiles((prev) => prev.filter((item) => item !== file))}
                   >
                     Remove
