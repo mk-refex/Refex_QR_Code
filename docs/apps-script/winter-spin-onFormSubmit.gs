@@ -82,36 +82,44 @@ function doGet(e) {
 }
 
 /**
- * Web App poll — always: Form → SpinAllow → Issue → redirect
+ * Web App poll — find THIS person by email (not the latest submit).
+ * emailHint: typed email, or blank to use the signed-in Google account.
  */
-function pollSpinUrl() {
+function pollSpinUrl(emailHint) {
   try {
-    var cached = CacheService.getScriptCache().get('latest_spin_url');
+    var email = normalizeEmail_(emailHint) || sessionEmail_();
+    if (!email) {
+      return {
+        ok: true,
+        ready: false,
+        phase: 'need_email',
+        message: 'Enter the email address you used on the form.',
+      };
+    }
+
+    var cached = CacheService.getScriptCache().get(emailCacheKey_(email));
     if (cached) {
-      return { ok: true, ready: true, spinUrl: cached, phase: 'cache' };
+      return { ok: true, ready: true, spinUrl: cached, phase: 'cache', email: email };
     }
 
-    var data = readLatestFromForm_();
-    if (!data) {
-      data = readLatestFromResponsesSheet_();
+    var existing = findByEmail_(email);
+    if (existing && existing.spinUrl) {
+      remember_(existing.spinUrl, existing.phone, email);
+      return { ok: true, ready: true, spinUrl: existing.spinUrl, phase: 'sheet', email: email };
     }
 
+    var data = findFormResponseByEmail_(email);
     if (!data || !data.name || !data.phone) {
       return {
         ok: true,
         ready: false,
         phase: 'empty',
-        message: buildEmptyHelp_(),
+        message: 'No form submission found for ' + email + '. Submit the form with this email, then try again.',
       };
     }
 
-    var result = completeEntry_(data.name, data.phone, data.email || '');
-    return {
-      ok: true,
-      ready: true,
-      spinUrl: result.spinUrl,
-      phase: 'done',
-    };
+    var result = completeEntry_(data.name, data.phone, email);
+    return { ok: true, ready: true, spinUrl: result.spinUrl, phase: 'done', email: email };
   } catch (err) {
     return {
       ok: false,
@@ -130,64 +138,91 @@ function pollSpinUrl() {
 function completeEntry_(name, phone, email) {
   name = String(name || '').trim().replace(/\s+/g, ' ');
   phone = normalizePhone(phone);
-  email = String(email || '').trim().toLowerCase();
+  email = normalizeEmail_(email);
 
+  if (!email) throw new Error('Email is required to match concurrent submissions.');
   if (name.length < 2) throw new Error('Name is missing.');
   if (!/^\d{10}$/.test(phone)) throw new Error('Phone must be 10 digits. Got: ' + phone);
 
-  var existing = findByPhone_(phone);
-  if (existing && existing.spinUrl) {
-    remember_(existing.spinUrl, phone, email || existing.email);
-    return {
-      spinUrl: existing.spinUrl,
-      token: existing.token,
-      rowNumber: existing.rowNumber,
-    };
-  }
+  var lock = LockService.getScriptLock();
+  lock.waitLock(25000);
+  try {
+    // Concurrent-safe: match this person by email first, then phone
+    var existing = findByEmail_(email) || findByPhone_(phone);
+    if (existing && existing.spinUrl) {
+      if (email && !existing.email) {
+        updateSpinRow_(existing.rowNumber, { email: email });
+      }
+      remember_(existing.spinUrl, phone, email);
+      return {
+        spinUrl: existing.spinUrl,
+        token: existing.token,
+        rowNumber: existing.rowNumber,
+      };
+    }
 
-  var rowNumber;
-  if (existing) {
-    rowNumber = existing.rowNumber;
-    var sh = getSpinSheet_();
-    sh.getRange(rowNumber, COL.Name).setValue(name);
-    sh.getRange(rowNumber, COL.Status).setValue('processing');
-    if (email) sh.getRange(rowNumber, COL.Email).setValue(email);
-    SpreadsheetApp.flush();
-  } else {
-    // FIRST: store in SpinAllow
-    rowNumber = appendSpinRow_({
-      timestamp: new Date(),
-      name: name,
-      phone: phone,
-      token: '',
-      status: 'processing',
-      prize: '',
-      spinUrl: '',
+    var rowNumber;
+    if (existing) {
+      rowNumber = existing.rowNumber;
+      var sh = getSpinSheet_();
+      sh.getRange(rowNumber, COL.Name).setValue(name);
+      sh.getRange(rowNumber, COL.Phone).setValue(phone);
+      sh.getRange(rowNumber, COL.Email).setValue(email);
+      sh.getRange(rowNumber, COL.Status).setValue('processing');
+      SpreadsheetApp.flush();
+    } else {
+      rowNumber = appendSpinRow_({
+        timestamp: new Date(),
+        name: name,
+        phone: phone,
+        token: '',
+        status: 'processing',
+        prize: '',
+        spinUrl: '',
+        email: email,
+        prizeCode: '',
+      });
+    }
+
+    var issued = callIssueApi_(name, phone);
+    remember_(issued.spinUrl, phone, email);
+
+    // Do not clear Prize — a finished spin must keep its gift
+    updateSpinRow_(rowNumber, {
+      token: issued.token,
+      status: existing && existing.status === 'spun' ? 'spun' : 'pending',
+      spinUrl: issued.spinUrl,
       email: email,
-      prizeCode: '',
     });
+
+    return { spinUrl: issued.spinUrl, token: issued.token, rowNumber: rowNumber };
+  } finally {
+    lock.releaseLock();
   }
-
-  // THEN: issue token
-  var issued = callIssueApi_(name, phone);
-  remember_(issued.spinUrl, phone, email);
-
-  // Update SAME record
-  updateSpinRow_(rowNumber, {
-    token: issued.token,
-    status: 'pending',
-    spinUrl: issued.spinUrl,
-    prize: '',
-  });
-
-  return { spinUrl: issued.spinUrl, token: issued.token, rowNumber: rowNumber };
 }
 
 // ----------------------------------------------------------------------
 // Read answers from the FORM (best source for form-bound script)
 // ----------------------------------------------------------------------
 
-function readLatestFromForm_() {
+function sessionEmail_() {
+  try {
+    return normalizeEmail_(Session.getActiveUser().getEmail() || '');
+  } catch (e) {
+    return '';
+  }
+}
+
+function findFormResponseByEmail_(email) {
+  email = normalizeEmail_(email);
+  if (!email) return null;
+
+  var fromForm = findFormAppResponseByEmail_(email);
+  if (fromForm) return fromForm;
+  return findResponsesSheetByEmail_(email);
+}
+
+function findFormAppResponseByEmail_(email) {
   var form;
   try {
     form = FormApp.getActiveForm();
@@ -199,17 +234,25 @@ function readLatestFromForm_() {
   var responses = form.getResponses();
   if (!responses || !responses.length) return null;
 
-  // Prefer a response from the last 30 minutes; else absolute latest
-  var cutoff = Date.now() - 30 * 60 * 1000;
-  var chosen = responses[responses.length - 1];
   for (var i = responses.length - 1; i >= 0; i--) {
-    if (responses[i].getTimestamp().getTime() >= cutoff) {
-      chosen = responses[i];
-      break;
-    }
+    var parsed = answersFromResponse_(responses[i]);
+    if (normalizeEmail_(parsed.email) === email) return parsed;
   }
+  return null;
+}
 
-  return answersFromResponse_(chosen);
+/** Kept for onFormSubmit fallback only — never used for Web App identity. */
+function readLatestFromForm_() {
+  var form;
+  try {
+    form = FormApp.getActiveForm();
+  } catch (e) {
+    form = null;
+  }
+  if (!form) return null;
+  var responses = form.getResponses();
+  if (!responses || !responses.length) return null;
+  return answersFromResponse_(responses[responses.length - 1]);
 }
 
 function answersFromResponse_(response) {
@@ -272,10 +315,11 @@ function readLatestFromResponsesSheet_() {
 
   var last = sheet.getLastRow();
   var lastCol = sheet.getLastColumn();
-  if (last < 2) return null;
+  if (last < 2 || lastCol < 1) return null;
 
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  var row = sheet.getRange(last, 1, last, lastCol).getValues()[0];
+  // getRange(row, col, numRows, numCols) — one row only
+  var row = sheet.getRange(last, 1, 1, lastCol).getValues()[0];
   var map = {};
   for (var c = 0; c < headers.length; c++) {
     map[String(headers[c] || '').trim()] = row[c];
@@ -398,11 +442,16 @@ function testIssueApiFromScript() {
   Logger.log(JSON.stringify(result, null, 2));
 }
 
+function emailCacheKey_(email) {
+  return 'spin_url_email_' + normalizeEmail_(email);
+}
+
 function remember_(spinUrl, phone, email) {
+  if (!email || !spinUrl) return;
   var c = CacheService.getScriptCache();
-  c.put('latest_spin_url', spinUrl, CACHE_TTL);
-  c.put('latest_spin_phone', phone || '', CACHE_TTL);
-  if (email) c.put('spin_url_email_' + email, spinUrl, CACHE_TTL);
+  // Per-email only. A shared "latest" key mixes concurrent users.
+  c.put(emailCacheKey_(email), spinUrl, CACHE_TTL);
+  c.put('spin_phone_email_' + normalizeEmail_(email), phone || '', CACHE_TTL);
 }
 
 // ----------------------------------------------------------------------
@@ -421,34 +470,45 @@ function doPost(e) {
 
 function handleUpdatePrize_(body) {
   try {
-    var key = PropertiesService.getScriptProperties().getProperty('WINTER_SPIN_API_KEY') || '';
-    if (!key || String(body.apiKey || '') !== key) {
-      return json_({ ok: false, message: 'Unauthorized' });
+    var key = String(
+      PropertiesService.getScriptProperties().getProperty('WINTER_SPIN_API_KEY') || ''
+    ).trim();
+    var given = String(body.apiKey || '').trim();
+    if (!key || given !== key) {
+      return json_({
+        ok: false,
+        message: 'Unauthorized prize update (key length ' + given.length + ').',
+      });
     }
 
     var phone = normalizePhone(body.phone || '');
     var token = String(body.token || '').trim();
-    if (!phone && !token) return json_({ ok: false, message: 'phone or token required' });
+    var email = normalizeEmail_(body.email || '');
+    if (!phone && !token && !email) {
+      return json_({ ok: false, message: 'phone, token, or email required' });
+    }
 
     var sheet = getSpinSheet_();
-    var last = sheet.getLastRow();
-    if (last < 2) return json_({ ok: false, message: 'No rows' });
-
-    var values = sheet.getRange(2, 1, last, HEADERS.length).getValues();
+    var values = readDataRows_(sheet);
     for (var i = values.length - 1; i >= 0; i--) {
       var rowPhone = normalizePhone(values[i][2]);
       var rowToken = String(values[i][3] || '').trim();
-      if ((phone && rowPhone === phone) || (token && rowToken === token)) {
-        var rowNumber = i + 2;
-        updateSpinRow_(rowNumber, {
-          status: body.status || 'spun',
-          prize: body.prize || body.prizeLabel || '',
-          prizeCode: body.prizeCode || '',
-        });
-        return json_({ ok: true, row: rowNumber, message: 'Gift updated' });
-      }
+      var rowEmail = normalizeEmail_(values[i][7]);
+      var match =
+        (token && rowToken && rowToken === token) ||
+        (email && rowEmail && rowEmail === email) ||
+        (phone && rowPhone && rowPhone === phone);
+      if (!match) continue;
+
+      var rowNumber = i + 2;
+      updateSpinRow_(rowNumber, {
+        status: body.status || 'spun',
+        prize: body.prize || body.prizeLabel || '',
+        prizeCode: body.prizeCode || '',
+      });
+      return json_({ ok: true, row: rowNumber, message: 'Gift updated' });
     }
-    return json_({ ok: false, message: 'Row not found' });
+    return json_({ ok: false, message: 'Row not found for prize update' });
   } catch (err) {
     return json_({ ok: false, message: String(err.message || err) });
   }
@@ -494,29 +554,97 @@ function appendSpinRow_(row) {
 function updateSpinRow_(rowNumber, fields) {
   if (!rowNumber || rowNumber < 2) return;
   var sheet = getSpinSheet_();
-  if (fields.token != null) sheet.getRange(rowNumber, COL.Token).setValue(fields.token);
-  if (fields.status != null) sheet.getRange(rowNumber, COL.Status).setValue(fields.status);
-  if (fields.prize != null) sheet.getRange(rowNumber, COL.Prize).setValue(fields.prize);
-  if (fields.spinUrl != null) sheet.getRange(rowNumber, COL.SpinUrl).setValue(fields.spinUrl);
-  if (fields.prizeCode != null) sheet.getRange(rowNumber, COL.PrizeCode).setValue(fields.prizeCode);
+  if (fields.token != null && fields.token !== '') sheet.getRange(rowNumber, COL.Token).setValue(fields.token);
+  if (fields.status != null && fields.status !== '') sheet.getRange(rowNumber, COL.Status).setValue(fields.status);
+  if (fields.prize != null && fields.prize !== '') sheet.getRange(rowNumber, COL.Prize).setValue(fields.prize);
+  if (fields.spinUrl != null && fields.spinUrl !== '') sheet.getRange(rowNumber, COL.SpinUrl).setValue(fields.spinUrl);
+  if (fields.prizeCode != null && fields.prizeCode !== '') {
+    sheet.getRange(rowNumber, COL.PrizeCode).setValue(fields.prizeCode);
+  }
+  if (fields.email != null && fields.email !== '') sheet.getRange(rowNumber, COL.Email).setValue(fields.email);
   SpreadsheetApp.flush();
+}
+
+/** Data rows only. getRange 3rd arg is row COUNT, not the last row index. */
+function readDataRows_(sheet) {
+  var last = sheet.getLastRow();
+  if (last < 2) return [];
+  return sheet.getRange(2, 1, last - 1, HEADERS.length).getValues();
+}
+
+function rowFromValues_(values, i) {
+  return {
+    rowNumber: i + 2,
+    name: values[i][1],
+    phone: normalizePhone(values[i][2]),
+    token: String(values[i][3] || '').trim(),
+    status: String(values[i][4] || '').trim(),
+    prize: values[i][5],
+    spinUrl: String(values[i][6] || '').trim(),
+    email: normalizeEmail_(values[i][7]),
+    prizeCode: values[i][8],
+  };
+}
+
+function findByEmail_(email) {
+  email = normalizeEmail_(email);
+  if (!email) return null;
+  var values = readDataRows_(getSpinSheet_());
+  for (var i = values.length - 1; i >= 0; i--) {
+    if (normalizeEmail_(values[i][7]) !== email) continue;
+    return rowFromValues_(values, i);
+  }
+  return null;
 }
 
 function findByPhone_(phone) {
   phone = normalizePhone(phone);
-  var sheet = getSpinSheet_();
-  var last = sheet.getLastRow();
-  if (last < 2) return null;
-  var values = sheet.getRange(2, 1, last, HEADERS.length).getValues();
+  if (!phone) return null;
+  var values = readDataRows_(getSpinSheet_());
   for (var i = values.length - 1; i >= 0; i--) {
     if (normalizePhone(values[i][2]) !== phone) continue;
+    return rowFromValues_(values, i);
+  }
+  return null;
+}
+
+function findResponsesSheetByEmail_(email) {
+  email = normalizeEmail_(email);
+  var props = PropertiesService.getScriptProperties();
+  var sheetId = props.getProperty('SHEET_ID');
+  if (!sheetId || !email) return null;
+
+  var ss = SpreadsheetApp.openById(sheetId);
+  var tabName = props.getProperty('FORM_RESPONSES_TAB') || '';
+  var sheet = tabName ? ss.getSheetByName(tabName) : null;
+  if (!sheet) {
+    var all = ss.getSheets();
+    for (var i = 0; i < all.length; i++) {
+      if (/form.?response/i.test(all[i].getName())) {
+        sheet = all[i];
+        break;
+      }
+    }
+  }
+  if (!sheet) return null;
+
+  var last = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (last < 2 || lastCol < 1) return null;
+
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var rows = sheet.getRange(2, 1, last - 1, lastCol).getValues();
+  for (var r = rows.length - 1; r >= 0; r--) {
+    var map = {};
+    for (var c = 0; c < headers.length; c++) {
+      map[String(headers[c] || '').trim()] = rows[r][c];
+    }
+    var rowEmail = normalizeEmail_(pick_(map, EMAIL_KEYS));
+    if (rowEmail !== email) continue;
     return {
-      rowNumber: i + 2,
-      name: values[i][1],
-      phone: phone,
-      token: String(values[i][3] || '').trim(),
-      spinUrl: String(values[i][6] || '').trim(),
-      email: String(values[i][7] || '').trim().toLowerCase(),
+      name: pick_(map, NAME_KEYS),
+      phone: pick_(map, PHONE_KEYS),
+      email: rowEmail,
     };
   }
   return null;
@@ -528,6 +656,10 @@ function normalizePhone(raw) {
   if (d.length === 12 && d.indexOf('91') === 0) return d.slice(2);
   if (d.length === 11 && d.charAt(0) === '0') return d.slice(1);
   return d;
+}
+
+function normalizeEmail_(raw) {
+  return String(raw || '').trim().toLowerCase();
 }
 
 function pick_(map, keys) {
@@ -581,18 +713,27 @@ function waitingHtml_() {
     '@keyframes r{to{transform:rotate(360deg)}}',
     '.e{color:#FFB4A8;display:none;margin-top:12px;word-break:break-word}',
     '</style></head><body><div><div class="s" id="sp"></div>',
-    '<p id="m">Saving to SpinAllow & opening spin…</p><p class="e" id="e"></p></div>',
+    '<p id="m">Finding your submission…</p>',
+    '<form id="f" style="display:none;max-width:360px;margin:12px auto 0">',
+    '<input id="em" type="email" required placeholder="Email used on the form" ',
+    'style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:0;margin-bottom:10px"/>',
+    '<button type="submit" style="width:100%;padding:12px;border:0;border-radius:10px;font-weight:700;cursor:pointer">Continue</button>',
+    '</form><p class="e" id="e"></p></div>',
     '<script>',
-    'var t=0,M=15,m=document.getElementById("m"),e=document.getElementById("e"),sp=document.getElementById("sp");',
+    'var t=0,M=12,email="",m=document.getElementById("m"),e=document.getElementById("e"),sp=document.getElementById("sp"),f=document.getElementById("f");',
     'function go(u){try{window.top.location.href=u}catch(x){try{location.replace(u)}catch(y){var w=open(u,"_blank");if(!w){e.style.display="block";e.textContent=u}}}}',
     'function fail(x){sp.style.display="none";m.textContent="Could not continue";e.style.display="block";e.textContent=x}',
+    'function askEmail(msg){sp.style.display="none";f.style.display="block";m.textContent=msg||"Enter the email used on the form."}',
     'function tick(){t++;google.script.run.withSuccessHandler(function(r){',
     ' if(r&&r.ready&&r.spinUrl){m.textContent="Opening…";go(r.spinUrl);return}',
+    ' if(r&&r.phase==="need_email"){askEmail(r.message);return}',
     ' if(r&&r.phase==="error"){fail(r.message||"Error");return}',
     ' if(r&&r.ok===false&&r.message){fail(r.message);return}',
+    ' if(r&&r.phase==="empty"){fail(r.message);return}',
     ' if(t>=M){fail((r&&r.message)||"Timed out");return}',
     ' m.textContent=(r&&r.message)||("Working… "+t);setTimeout(tick,700)',
-    '}).withFailureHandler(function(err){if(t>=M)fail(String(err));else setTimeout(tick,700)}).pollSpinUrl()}',
+    '}).withFailureHandler(function(err){if(t>=M)fail(String(err));else setTimeout(tick,700)}).pollSpinUrl(email)}',
+    'f.addEventListener("submit",function(ev){ev.preventDefault();email=document.getElementById("em").value;e.style.display="none";f.style.display="none";sp.style.display="block";t=0;m.textContent="Finding your submission…";tick()});',
     'tick();',
     '</script></body></html>',
   ].join('');

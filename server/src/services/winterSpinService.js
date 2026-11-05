@@ -585,8 +585,8 @@ async function spinOnce({ name, phone, token, ip, userAgent }) {
       return { alreadySpun: false, entry, prize };
     });
 
-    // After spin completes: update same SpinAllow row with gift/prize
-    if (!result.alreadySpun && result.entry) {
+    // After spin completes: write Prize + Status=spun on the same SpinAllow row
+    if (result.entry) {
       const entry = result.entry;
       syncPrizeToSheet_({
         phone: entry.phone,
@@ -594,7 +594,7 @@ async function spinOnce({ name, phone, token, ip, userAgent }) {
         prize: entry.prize_label || entry.prizeLabel,
         prizeCode: entry.prize_code || entry.prizeCode,
       }).catch((err) => {
-        console.warn("Winter spin Sheet prize sync skipped:", err.message);
+        console.warn("Winter spin Sheet prize sync failed:", err.message);
       });
     }
 
@@ -613,6 +613,14 @@ async function spinOnce({ name, phone, token, ip, userAgent }) {
         where: { phone: cleanPhone },
       });
       if (entry) {
+        syncPrizeToSheet_({
+          phone: entry.phone,
+          token: entry.token,
+          prize: entry.prize_label,
+          prizeCode: entry.prize_code,
+        }).catch((err) => {
+          console.warn("Winter spin Sheet prize sync failed:", err.message);
+        });
         return {
           ok: true,
           alreadySpun: true,
@@ -652,12 +660,13 @@ async function syncPrizeToSheet_({ phone, token, prize, prizeCode }) {
   try {
     body = JSON.parse(text);
   } catch (_) {
-    // Apps Script sometimes wraps JSON; try to detect failure from status
+    body = null;
   }
 
-  if (!res.ok || (body && body.ok === false)) {
+  // A 200 HTML page (login / old Web App) is not a successful sheet update
+  if (!res.ok || !body || body.ok !== true) {
     throw new Error(
-      `Sheet gift update failed: ${body?.message || text.slice(0, 200) || res.status}`
+      `Sheet gift update failed (${res.status}): ${body?.message || text.slice(0, 220)}`
     );
   }
 
