@@ -22,6 +22,21 @@ module.exports = {
     }
   },
 
+  exportExcel: async (req, res) => {
+    try {
+      const buffer = await winterCampaignAdminService.buildExport(req.query);
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader("Content-Disposition", 'attachment; filename="winter-campaign.xlsx"');
+      return res.send(buffer);
+    } catch (error) {
+      console.error("Winter campaign export error:", error);
+      return status.ResponseStatus(res, 500, "Unable to export the list.");
+    }
+  },
+
   getBill: async (req, res) => {
     try {
       const file = await winterCampaignAdminService.billFile(req.params.id);

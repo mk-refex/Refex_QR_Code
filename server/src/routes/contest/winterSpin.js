@@ -7,6 +7,7 @@ const { authCheck, authAdmin, authPage } = require("../../middlewares/auth");
 const canViewCampaign = authPage("campaign");
 
 router.get("/winter-campaign/submissions", authCheck, canViewCampaign, winterCampaignAdmin.listSubmissions);
+router.get("/winter-campaign/export", authCheck, canViewCampaign, winterCampaignAdmin.exportExcel);
 router.get("/winter-campaign/winners", authCheck, canViewCampaign, winterCampaignAdmin.listWinners);
 router.get("/winter-campaign/bills/:id", authCheck, canViewCampaign, winterCampaignAdmin.getBill);
 router.put("/winter-campaign/submissions/:id", authCheck, authAdmin, winterCampaignAdmin.updateSubmission);

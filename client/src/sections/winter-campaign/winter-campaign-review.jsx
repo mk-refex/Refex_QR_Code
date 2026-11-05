@@ -105,6 +105,7 @@ export default function WinterCampaignReview() {
   const [editRow, setEditRow] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '' });
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const load = useCallback(async () => {
@@ -193,6 +194,29 @@ export default function WinterCampaignReview() {
 
   const records = info.records || [];
 
+  const exportExcel = async () => {
+    setExporting(true);
+    setError('');
+    try {
+      const res = await axios.get('/api/winter-campaign/export', {
+        params: { search: query },
+        responseType: 'blob',
+      });
+      const url = URL.createObjectURL(res.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'winter-campaign.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to export the list.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const openEdit = (row) => {
     setEditRow(row);
     setEditForm({ name: row.name, email: row.email, phone: row.phone });
@@ -250,6 +274,17 @@ export default function WinterCampaignReview() {
             sx={{ width: { xs: 1, sm: 'auto' } }}
           >
             Search
+          </Button>
+          <Button
+            variant="outlined"
+            disabled={exporting}
+            startIcon={
+              exporting ? <CircularProgress size={16} /> : <Iconify icon="mdi:microsoft-excel" width={18} />
+            }
+            onClick={exportExcel}
+            sx={{ width: { xs: 1, sm: 'auto' } }}
+          >
+            Export
           </Button>
         </Stack>
 
@@ -353,7 +388,7 @@ export default function WinterCampaignReview() {
             </Box>
           ) : (
             <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size="small" sx={{ minWidth: 960 }}>
+              <Table size="small" sx={{ minWidth: 820 }}>
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
@@ -384,7 +419,7 @@ export default function WinterCampaignReview() {
                     ? records.map((row) => (
                         <TableRow key={row.id} hover>
                           <TableCell>{row.name}</TableCell>
-                          <TableCell sx={{ wordBreak: 'break-all' }}>{row.email}</TableCell>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>{row.email}</TableCell>
                           <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatPhone(row.phone)}</TableCell>
                           <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatWhen(row.createdAt)}</TableCell>
                           <TableCell>
@@ -393,35 +428,30 @@ export default function WinterCampaignReview() {
                           <TableCell>
                             <Stack spacing={0.5} alignItems="flex-start">
                               {(row.bills || []).map((bill) => (
-                                <Stack key={bill.id} direction="row" spacing={0.5} alignItems="center">
-                                  <Button size="small" onClick={() => openBill(bill)} sx={{ textTransform: 'none' }}>
+                                <Stack key={bill.id} direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
+                                  <Typography variant="body2" noWrap title={bill.originalName} sx={{ maxWidth: 180 }}>
                                     {bill.originalName}
-                                  </Button>
-                                  <Button
-                                    size="small"
-                                    variant="outlined"
-                                    startIcon={<Iconify icon="eva:download-outline" width={16} />}
+                                  </Typography>
+                                  <IconAction title="View bill" icon="solar:eye-bold" onClick={() => openBill(bill)} />
+                                  <IconAction
+                                    title="Download bill"
+                                    icon="eva:download-outline"
                                     onClick={() => downloadBill(bill)}
-                                  >
-                                    Download
-                                  </Button>
+                                  />
                                 </Stack>
                               ))}
                             </Stack>
                           </TableCell>
                           {canManage ? (
                             <TableCell align="right">
-                              <Stack direction="row" spacing={1} justifyContent="flex-end">
-                                <Button size="small" onClick={() => openEdit(row)}>
-                                  Edit
-                                </Button>
-                                <Button
-                                  size="small"
+                              <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                                <IconAction title="Edit" icon="solar:pen-bold" onClick={() => openEdit(row)} />
+                                <IconAction
+                                  title="Remove"
+                                  icon="solar:trash-bin-trash-bold"
                                   color="error"
                                   onClick={() => setDeleteTarget({ kind: 'entry', id: row.id, name: row.name })}
-                                >
-                                  Remove
-                                </Button>
+                                />
                               </Stack>
                             </TableCell>
                           ) : null}
@@ -432,19 +462,18 @@ export default function WinterCampaignReview() {
                     ? records.map((row) => (
                         <TableRow key={row.id} hover>
                           <TableCell>{row.name}</TableCell>
-                          <TableCell sx={{ wordBreak: 'break-all' }}>{row.email || '—'}</TableCell>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>{row.email || '—'}</TableCell>
                           <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatPhone(row.phone)}</TableCell>
                           <TableCell>{row.prizeLabel}</TableCell>
                           <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatWhen(row.spunAt)}</TableCell>
                           {canManage ? (
                             <TableCell align="right">
-                              <Button
-                                size="small"
+                              <IconAction
+                                title="Remove"
+                                icon="solar:trash-bin-trash-bold"
                                 color="error"
                                 onClick={() => setDeleteTarget({ kind: 'winner', id: row.id, name: row.name })}
-                              >
-                                Remove
-                              </Button>
+                              />
                             </TableCell>
                           ) : null}
                         </TableRow>

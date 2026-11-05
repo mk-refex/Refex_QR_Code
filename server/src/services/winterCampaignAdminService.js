@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const XLSX = require("xlsx");
 const { Op } = require("sequelize");
 const {
   sequelize,
@@ -139,6 +140,98 @@ async function listWinners(query) {
   };
 }
 
+function formatExportWhen(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function exportPhone(value) {
+  const digits = String(value || "");
+  if (!digits) return "";
+  return digits.length > 10 ? `+${digits}` : digits;
+}
+
+function sheetFrom(headers, rows) {
+  const data = [headers, ...rows.map((row) => headers.map((key) => row[key] ?? ""))];
+  const sheet = XLSX.utils.aoa_to_sheet(data);
+  sheet["!cols"] = headers.map((header) => ({
+    wch: Math.min(48, Math.max(header.length + 2, 18)),
+  }));
+  return sheet;
+}
+
+async function buildExport(query) {
+  const submissions = await WinterCampaignSubmission.findAll({
+    where: searchWhere(query.search, ["name", "email", "phone"]),
+    include: [{ model: WinterCampaignBill, as: "bills", attributes: ["original_name"] }],
+    order: [["created_at", "DESC"]],
+  });
+  const phones = submissions.map((row) => row.phone);
+  const spinEntries = phones.length
+    ? await WinterSpinEntry.findAll({ where: { phone: phones } })
+    : [];
+  const entryByPhone = new Map(spinEntries.map((entry) => [entry.phone, entry]));
+
+  const entryRows = submissions.map((row) => {
+    const prize = entryByPhone.get(row.phone);
+    return {
+      Name: row.name,
+      Email: row.email,
+      Phone: exportPhone(row.phone),
+      Submitted: formatExportWhen(row.created_at),
+      Prize: prize ? prize.prize_label : "Not spun",
+      Winner: prize?.is_win ? "Yes" : "No",
+      Bills: (row.bills || [])
+        .map((bill) => bill.original_name)
+        .filter(Boolean)
+        .join(", "),
+    };
+  });
+
+  const winners = await WinterSpinEntry.findAll({
+    where: {
+      is_win: true,
+      ...searchWhere(query.search, ["name", "phone", "prize_label"]),
+    },
+    order: [["spun_at", "DESC"]],
+  });
+  const winnerPhones = winners.map((row) => row.phone);
+  const winnerSubmissions = winnerPhones.length
+    ? await WinterCampaignSubmission.findAll({
+        where: { phone: winnerPhones },
+        attributes: ["phone", "email"],
+      })
+    : [];
+  const emailByPhone = new Map(winnerSubmissions.map((row) => [row.phone, row.email]));
+  const winnerRows = winners.map((row) => ({
+    Name: row.name,
+    Email: emailByPhone.get(row.phone) || "",
+    Phone: exportPhone(row.phone),
+    Prize: row.prize_label,
+    Week: row.week_key,
+    Won: formatExportWhen(row.spun_at),
+  }));
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    workbook,
+    sheetFrom(["Name", "Email", "Phone", "Submitted", "Prize", "Winner", "Bills"], entryRows),
+    "Entries"
+  );
+  XLSX.utils.book_append_sheet(
+    workbook,
+    sheetFrom(["Name", "Email", "Phone", "Prize", "Week", "Won"], winnerRows),
+    "Winners"
+  );
+  return XLSX.write(workbook, { bookType: "xlsx", type: "buffer" });
+}
+
 async function billFile(id) {
   const bill = await WinterCampaignBill.findByPk(id);
   if (!bill) return { ok: false, status: 404, message: "Bill not found." };
@@ -246,6 +339,7 @@ async function deleteWinner(id) {
 module.exports = {
   listSubmissions,
   listWinners,
+  buildExport,
   billFile,
   updateSubmission,
   deleteSubmission,
