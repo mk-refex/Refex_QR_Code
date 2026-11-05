@@ -17,6 +17,7 @@ module.exports = (sequelize) => {
       pending_password: DataTypes.TEXT,
       photo: DataTypes.BLOB("medium"),
       role: DataTypes.STRING(10),
+      page_access: DataTypes.TEXT,
       employee_id: DataTypes.STRING(50),
       company_name: DataTypes.STRING(255),
       designation: DataTypes.STRING(255),

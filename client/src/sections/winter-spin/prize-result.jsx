@@ -145,13 +145,6 @@ export default function PrizeResult({ entry, alreadySpun }) {
       </Typography>
 
       <Stack spacing={0.75} sx={{ mt: { xs: 2, sm: 2.5 }, color: alpha('#fff', 0.8), maxWidth: 340, px: 1 }}>
-        <Typography
-          variant="body2"
-          fontWeight={600}
-          sx={{ wordBreak: 'break-word', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
-        >
-          {entry.name} · {entry.phone}
-        </Typography>
         {isCashWin && (
           <Typography variant="caption" sx={{ lineHeight: 1.5 }}>
             Our team will contact you to verify and claim your reward.

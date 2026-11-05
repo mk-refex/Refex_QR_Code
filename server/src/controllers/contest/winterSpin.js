@@ -1,5 +1,40 @@
 const status = require("../../helpers/Response");
 const winterSpinService = require("../../services/winterSpinService");
+const winterCampaignService = require("../../services/winterCampaignService");
+
+const SPIN_COOKIE = "refex_spin";
+
+function readSpinCookie(req) {
+  const header = String(req.headers.cookie || "");
+  const parts = header.split(";");
+  for (let i = 0; i < parts.length; i += 1) {
+    const trimmed = parts[i].trim();
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) continue;
+    if (trimmed.slice(0, eq) !== SPIN_COOKIE) continue;
+    try {
+      return decodeURIComponent(trimmed.slice(eq + 1));
+    } catch (error) {
+      return "";
+    }
+  }
+  return "";
+}
+
+function setSpinCookie(req, res, token, expiresAt) {
+  const expiresMs = expiresAt ? new Date(expiresAt).getTime() - Date.now() : 72 * 60 * 60 * 1000;
+  const maxAge = Math.max(60, Math.floor(expiresMs / 1000));
+  const secure = Boolean(req.secure) || String(req.headers["x-forwarded-proto"] || "") === "https";
+  const pieces = [
+    `${SPIN_COOKIE}=${encodeURIComponent(token)}`,
+    "HttpOnly",
+    "Path=/",
+    "SameSite=Lax",
+    `Max-Age=${maxAge}`,
+  ];
+  if (secure) pieces.push("Secure");
+  res.append("Set-Cookie", pieces.join("; "));
+}
 
 function clientIp(req) {
   const forwarded = req.headers["x-forwarded-for"];
@@ -36,11 +71,7 @@ function extractApiKey(req) {
 module.exports = {
   getStatus: async (req, res) => {
     try {
-      const phone = req.query.phone || req.query.mobile || "";
-      const name = req.query.name || req.query.full_name || "";
-      const token = req.query.token || "";
-
-      const result = await winterSpinService.getStatus({ phone, name, token });
+      const result = await winterSpinService.getSessionStatus(readSpinCookie(req));
       if (!result.ok) {
         return status.ResponseStatus(res, result.status || 403, result.error);
       }
@@ -55,8 +86,42 @@ module.exports = {
     }
   },
 
+  register: async (req, res) => {
+    try {
+      const result = await winterCampaignService.registerSubmission({
+        name: req.body.name || "",
+        email: req.body.email || "",
+        phone: req.body.phone || req.body.mobile || "",
+        consent: req.body.consent,
+        files: req.files || [],
+        ip: clientIp(req),
+        userAgent: req.headers["user-agent"],
+      });
+
+      if (!result.ok) {
+        return status.ResponseStatus(res, result.status || 400, result.message);
+      }
+
+      if (result.sessionToken) {
+        setSpinCookie(req, res, result.sessionToken, result.expiresAt);
+      }
+
+      return status.ResponseStatus(res, 200, result.message, {
+        alreadyRegistered: result.alreadyRegistered,
+        spinPath: "/winter-spin",
+      });
+    } catch (error) {
+      console.error("Winter campaign register error:", error);
+      return status.ResponseStatus(
+        res,
+        500,
+        "Unable to save your entry. Please try again."
+      );
+    }
+  },
+
   /**
-   * Trusted callers only (Google Apps Script / backend).
+   * Trusted server-to-server callers only.
    * POST /api/winter-spin/issue
    * Header: X-API-Key: <WINTER_SPIN_API_KEY>
    * Body: { name, phone }
@@ -90,14 +155,8 @@ module.exports = {
 
   spin: async (req, res) => {
     try {
-      const name = req.body.name || req.body.full_name || "";
-      const phone = req.body.phone || req.body.mobile || req.body.mobile_number || "";
-      const token = req.body.token || "";
-
-      const result = await winterSpinService.spinOnce({
-        name,
-        phone,
-        token,
+      const result = await winterSpinService.spinSession({
+        token: readSpinCookie(req),
         ip: clientIp(req),
         userAgent: req.headers["user-agent"],
       });

@@ -60,7 +60,7 @@ module.exports = {
               existingUser.password
             );
             if (compare) {
-              const { id, first_name, last_name, email, user_name,role, photo} = existingUser;
+              const { id, first_name, last_name, email, user_name, role, photo, page_access } = existingUser;
               const history = await LoginHistory.create({ user_id:id, first_name, last_name, email, user_name, status:'Logged-In'});
               const token = jwt.sign({ session_id:history.id,user_id:id }, APP_KEY, { expiresIn: '1d' });   //, { expiresIn: '1d' }
               return res.status(200).json({
@@ -75,6 +75,7 @@ module.exports = {
                   email,
                   user_name,
                   role,
+                  page_access,
                   photo: photo ? Buffer.from(photo, "binary").toString() : null,
                 }
               });

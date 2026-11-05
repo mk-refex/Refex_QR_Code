@@ -114,6 +114,7 @@ sequelize
           defaultValue: false,
         },
         { name: "pending_password", type: Sequelize.DataTypes.TEXT, allowNull: true },
+        { name: "page_access", type: Sequelize.DataTypes.TEXT, allowNull: true },
         {
           name: "is_delete",
           type: Sequelize.DataTypes.TINYINT,

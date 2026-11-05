@@ -6,10 +6,13 @@ import LogoutPage from 'src/pages/logout';
 import { useAuth } from 'src/context/AuthContext';
 import DashboardLayout from 'src/layouts/dashboard';
 import { getDefaultRoute, hasRole, ADMIN_ROLES } from 'src/utils/roles';
+import { hasPageAccess } from 'src/utils/pageAccess';
 
 export const BrochureFormPage = lazy(() => import('src/pages/brochure-form'));
 export const ContestFormPage = lazy(() => import('src/pages/contest-form'));
 export const WinterSpinPage = lazy(() => import('src/pages/winter-spin'));
+export const WinterCampaignPage = lazy(() => import('src/pages/winter-campaign'));
+export const WinterCampaignReviewPage = lazy(() => import('src/pages/winter-campaign-review'));
 export const BrochureDownloadForm = lazy(() => import('src/pages/brochure-download'));
 export const QRCodeLinkPage = lazy(() => import('src/pages/qr-code-link'));
 export const InstaLinkPage = lazy(() => import('src/pages/qr-insta'));
@@ -35,7 +38,7 @@ export const Page404 = lazy(() => import('src/pages/page-not-found'));
 
 // ----------------------------------------------------------------------
 
-function PrivateRoute({ element, allowedRoles }) {
+function PrivateRoute({ element, allowedRoles, allowedPage }) {
   const { isAuthenticated, user } = useAuth();
 
   if (!isAuthenticated) {
@@ -46,12 +49,17 @@ function PrivateRoute({ element, allowedRoles }) {
     return <Navigate to={getDefaultRoute(user)} replace />;
   }
 
+  if (allowedPage && !hasPageAccess(user, allowedPage)) {
+    return <Navigate to={getDefaultRoute(user)} replace />;
+  }
+
   return element;
 }
 
 PrivateRoute.propTypes = {
   element: PropTypes.element,
   allowedRoles: PropTypes.arrayOf(PropTypes.string),
+  allowedPage: PropTypes.string,
 };
 
 function DashboardShell() {
@@ -109,6 +117,14 @@ export default function Router() {
           ],
         },
         {
+          path: 'campaign',
+          element: <PrivateRoute allowedPage="campaign" element={<Outlet />} />,
+          children: [
+            { element: <Navigate to="/campaign/review" />, index: true },
+            { path: 'review', element: <WinterCampaignReviewPage /> },
+          ],
+        },
+        {
           path: 'users',
           element: <PrivateRoute allowedRoles={ADMIN_ROLES} element={<Outlet />} />,
           children: [
@@ -146,8 +162,12 @@ export default function Router() {
       children: [
         { element: <Navigate to="/airport/fly_buy_summer" />, index: true },
         { path: 'fly_buy_summer', element: <ContestFormPage /> },
-        { path: 'winter_campaign', element: <WinterSpinPage /> },
+        { path: 'winter_campaign', element: <WinterCampaignPage /> },
       ],
+    },
+    {
+      path: 'winter-campaign',
+      element: <WinterCampaignPage />,
     },
     {
       path: 'winter-spin',

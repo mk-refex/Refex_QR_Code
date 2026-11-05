@@ -5,13 +5,18 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import Checkbox from '@mui/material/Checkbox';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
+import FormGroup from '@mui/material/FormGroup';
+import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { ROLES } from 'src/utils/roles';
+import { OPTIONAL_PAGES, parsePageAccess } from 'src/utils/pageAccess';
 
 // ----------------------------------------------------------------------
 
@@ -26,6 +31,7 @@ const EMPTY_FORM = {
   designation: '',
   role: ROLES.User,
   password: '',
+  pageAccess: [],
 };
 
 export default function UserFormDialog({ open, onClose, onSubmit, initialData, saving }) {
@@ -44,7 +50,13 @@ export default function UserFormDialog({ open, onClose, onSubmit, initialData, s
               employeeId: initialData.employee_id || '',
               companyName: initialData.company_name || '',
               designation: initialData.designation || '',
-              role: initialData.role || ROLES.User,
+              role: initialData.role === ROLES.Campaign ? ROLES.User : initialData.role || ROLES.User,
+              pageAccess: [
+                ...new Set([
+                  ...parsePageAccess(initialData.page_access),
+                  ...(initialData.role === ROLES.Campaign ? ['campaign'] : []),
+                ]),
+              ],
             }
           : EMPTY_FORM
       );
@@ -135,6 +147,40 @@ export default function UserFormDialog({ open, onClose, onSubmit, initialData, s
               <MenuItem value={ROLES.Admin}>Admin</MenuItem>
               <MenuItem value={ROLES.SuperAdmin}>SuperAdmin</MenuItem>
             </TextField>
+            {form.role === ROLES.User ? (
+              <Stack spacing={0.5}>
+                <Typography variant="subtitle2">Page access</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  QR Code is included for every user. Select any extra pages this user can open.
+                </Typography>
+                <FormGroup>
+                  <FormControlLabel control={<Checkbox checked disabled />} label="QR Code" />
+                  {OPTIONAL_PAGES.map((page) => (
+                    <FormControlLabel
+                      key={page.id}
+                      label={page.label}
+                      control={
+                        <Checkbox
+                          checked={form.pageAccess.includes(page.id)}
+                          onChange={(event) => {
+                            setForm((prev) => ({
+                              ...prev,
+                              pageAccess: event.target.checked
+                                ? [...new Set([...prev.pageAccess, page.id])]
+                                : prev.pageAccess.filter((id) => id !== page.id),
+                            }));
+                          }}
+                        />
+                      }
+                    />
+                  ))}
+                </FormGroup>
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Admins can open every page.
+              </Typography>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>

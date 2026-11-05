@@ -12,6 +12,7 @@ const {
   decryptPendingPassword,
 } = require("../utils/pendingPassword");
 const { buildListFilter } = require("../utils/userFilters");
+const { serializePageAccess } = require("../utils/pageAccess");
 
 const saltRounds = 10;
 
@@ -137,6 +138,7 @@ module.exports = {
         companyName,
         designation,
         password,
+        pageAccess,
       } = req.body;
 
       const normalizedEmail = String(email).trim().toLowerCase();
@@ -163,6 +165,7 @@ module.exports = {
         company_name: companyName || "",
         designation: designation || "",
         role: role || Role.User,
+        page_access: serializePageAccess(pageAccess),
         password: hashed,
         pending_password: encryptPendingPassword(plainPassword),
         is_verified: false,
@@ -199,6 +202,7 @@ module.exports = {
         employeeId,
         companyName,
         designation,
+        pageAccess,
       } = req.body;
 
       if (email) {
@@ -224,6 +228,7 @@ module.exports = {
       if (companyName !== undefined) user.company_name = companyName;
       if (designation !== undefined) user.designation = designation;
       if (role !== undefined) user.role = role;
+      if (pageAccess !== undefined) user.page_access = serializePageAccess(pageAccess);
 
       await user.save();
       return status.ResponseStatus(res, 200, "User updated", sanitizeUser(user));

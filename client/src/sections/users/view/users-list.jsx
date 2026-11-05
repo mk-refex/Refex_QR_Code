@@ -30,6 +30,7 @@ import TableContainer from '@mui/material/TableContainer';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import Iconify from 'src/components/iconify';
+import { pageAccessLabels } from 'src/utils/pageAccess';
 import ListPageHeader from 'src/components/list-page-header';
 
 import { EMPTY_FILTER } from '../filter-config';
@@ -44,6 +45,7 @@ const TABLE_COLUMNS = [
   { id: 'phone', label: 'Phone' },
   { id: 'employee_id', label: 'Employee ID' },
   { id: 'role', label: 'Role' },
+  { id: 'pages', label: 'Pages' },
   { id: 'designation', label: 'Designation' },
   { id: 'company_name', label: 'Company' },
   { id: 'status', label: 'Status' },
@@ -164,6 +166,7 @@ export default function UsersList() {
         companyName: form.companyName,
         designation: form.designation,
         role: form.role,
+        pageAccess: form.role === 'User' ? form.pageAccess || [] : [],
       };
 
       if (!editUser && form.password?.trim()) {
@@ -327,6 +330,7 @@ export default function UsersList() {
                     <TableCell>{row.phone || '—'}</TableCell>
                     <TableCell>{row.employee_id || '—'}</TableCell>
                     <TableCell>{row.role}</TableCell>
+                    <TableCell>{pageAccessLabels(row)}</TableCell>
                     <TableCell>{row.designation || '—'}</TableCell>
                     <TableCell>{row.company_name || '—'}</TableCell>
                     <TableCell>

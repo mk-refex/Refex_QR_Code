@@ -24,7 +24,7 @@ async function loadActiveSsoProvider(providerSlug) {
 }
 
 function formatUserData(user) {
-  const { id, first_name, last_name, email, user_name, role, photo } = user;
+  const { id, first_name, last_name, email, user_name, role, photo, page_access } = user;
   return {
     id,
     first_name,
@@ -32,6 +32,7 @@ function formatUserData(user) {
     email,
     user_name,
     role,
+    page_access,
     photo: photo ? Buffer.from(photo, "binary").toString() : null,
   };
 }

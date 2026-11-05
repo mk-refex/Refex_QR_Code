@@ -2,6 +2,7 @@ export const ROLES = {
   SuperAdmin: 'SuperAdmin',
   Admin: 'Admin',
   User: 'User',
+  Campaign: 'Campaign',
 };
 
 export const ADMIN_ROLES = [ROLES.Admin, ROLES.SuperAdmin];

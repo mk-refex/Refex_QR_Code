@@ -1,21 +1,16 @@
 import axios from 'axios';
-import PropTypes from 'prop-types';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
-import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
-import CircularProgress from '@mui/material/CircularProgress';
 import Grid from '@mui/material/Unstable_Grid2';
 import { alpha, keyframes } from '@mui/material/styles';
 
-import Logo from 'src/components/logo';
-import Iconify from 'src/components/iconify';
 import Footer from 'src/layouts/dashboard/footer';
 
 import SpinWheel from './spin-wheel';
@@ -40,56 +35,6 @@ const pulseGlow = keyframes`
   0%, 100% { opacity: 0.35; transform: scale(1); }
   50% { opacity: 0.55; transform: scale(1.06); }
 `;
-
-function normalizePhone(raw) {
-  const digits = String(raw || '').replace(/\D/g, '');
-  if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
-  if (digits.length === 11 && digits.startsWith('0')) return digits.slice(1);
-  return digits;
-}
-
-function IdentityChip({ icon, label, tone }) {
-  const color = tone === 'orange' ? BRAND.orange : BRAND.blue;
-  return (
-    <Box
-      sx={{
-        maxWidth: { xs: '100%', sm: 280 },
-        px: { xs: 1.35, sm: 1.75 },
-        py: { xs: 0.75, sm: 0.9 },
-        borderRadius: 999,
-        bgcolor: alpha(color, 0.28),
-        border: `1px solid ${alpha('#fff', 0.35)}`,
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 0.85,
-        color: '#FFFFFF',
-        boxShadow: `0 10px 24px ${alpha(color, 0.22)}`,
-        backdropFilter: 'blur(8px)',
-      }}
-    >
-      <Iconify icon={icon} width={18} sx={{ color: '#FFFFFF', flexShrink: 0 }} />
-      <Typography
-        variant="caption"
-        noWrap
-        title={label}
-        sx={{
-          fontWeight: 800,
-          color: '#FFFFFF',
-          letterSpacing: 0.2,
-          fontSize: { xs: '0.75rem', sm: '0.8125rem' },
-        }}
-      >
-        {label}
-      </Typography>
-    </Box>
-  );
-}
-
-IdentityChip.propTypes = {
-  icon: PropTypes.string.isRequired,
-  label: PropTypes.string.isRequired,
-  tone: PropTypes.oneOf(['blue', 'orange']),
-};
 
 function ResultPlaceholder() {
   return (
@@ -143,31 +88,12 @@ function ResultPlaceholder() {
 }
 
 export default function WinterSpinView() {
-  const [searchParams] = useSearchParams();
   const wheelBoxRef = useRef(null);
   const [wheelSize, setWheelSize] = useState(320);
 
-  const name = useMemo(
-    () => String(searchParams.get('name') || searchParams.get('full_name') || '').trim(),
-    [searchParams]
-  );
-  const phone = useMemo(
-    () =>
-      normalizePhone(
-        searchParams.get('phone') ||
-          searchParams.get('mobile') ||
-          searchParams.get('mobile_number') ||
-          ''
-      ),
-    [searchParams]
-  );
-  const token = useMemo(
-    () => String(searchParams.get('token') || '').trim(),
-    [searchParams]
-  );
-
   const [loading, setLoading] = useState(true);
   const [blocked, setBlocked] = useState(false);
+  const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
   const [campaignActive, setCampaignActive] = useState(true);
   const [entry, setEntry] = useState(null);
@@ -178,11 +104,9 @@ export default function WinterSpinView() {
   const [pendingEntry, setPendingEntry] = useState(null);
   const [showResult, setShowResult] = useState(false);
 
-  const hasValidLink = Boolean(token && name && /^\d{10}$/.test(phone));
+  const autoSpinStarted = useRef(false);
 
-  const canSpin = Boolean(
-    hasValidLink && campaignActive && !alreadySpun && !spinning && !entry
-  );
+  const canSpin = Boolean(ready && campaignActive && !alreadySpun && !spinning && !entry);
 
   useEffect(() => {
     const el = wheelBoxRef.current;
@@ -205,16 +129,12 @@ export default function WinterSpinView() {
     let cancelled = false;
 
     async function load() {
-      // Missing or incomplete link → real 404 (do not open spin UI)
-      if (!token || !name || !/^\d{10}$/.test(phone)) {
-        if (!cancelled) setBlocked(true);
-        return;
+      if (window.location.search) {
+        window.history.replaceState({}, '', '/winter-spin');
       }
 
       try {
-        const res = await axios.get('/api/winter-spin/status', {
-          params: { name, phone, token },
-        });
+        const res = await axios.get('/api/winter-spin/status', { withCredentials: true });
         if (cancelled) return;
         const data = res.data?.results;
         setCampaignActive(Boolean(data?.campaignActive));
@@ -226,7 +146,10 @@ export default function WinterSpinView() {
         if (!data?.campaignActive) {
           setError('The Refex Winter Campaign spin period has ended.');
         }
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setReady(true);
+          setLoading(false);
+        }
       } catch (err) {
         if (cancelled) return;
         const statusCode = err.response?.status;
@@ -244,7 +167,7 @@ export default function WinterSpinView() {
     return () => {
       cancelled = true;
     };
-  }, [token, name, phone]);
+  }, []);
 
   const handleSpinComplete = useCallback(() => {
     setSpinning(false);
@@ -265,14 +188,14 @@ export default function WinterSpinView() {
     }
   }, [pendingEntry]);
 
-  const handleSpin = async () => {
-    if (!canSpin || !token) return;
+  const handleSpin = useCallback(async () => {
+    if (!canSpin) return;
     setError('');
     setShowResult(false);
 
     try {
       setSpinning(true);
-      const res = await axios.post('/api/winter-spin/spin', { name, phone, token });
+      const res = await axios.post('/api/winter-spin/spin', {}, { withCredentials: true });
       const data = res.data?.results;
       const nextEntry = data?.entry;
 
@@ -302,9 +225,15 @@ export default function WinterSpinView() {
       }
       setError(err.response?.data?.message || 'Unable to spin right now. Please try again.');
     }
-  };
+  }, [canSpin]);
 
-  if (blocked || !hasValidLink) {
+  useEffect(() => {
+    if (loading || blocked || !canSpin || autoSpinStarted.current) return;
+    autoSpinStarted.current = true;
+    handleSpin();
+  }, [loading, blocked, canSpin, handleSpin]);
+
+  if (blocked) {
     return <Navigate to="/404" replace />;
   }
 
@@ -312,10 +241,6 @@ export default function WinterSpinView() {
   if (loading) {
     return null;
   }
-
-  let spinLabel = 'Spin the Wheel';
-  if (spinning) spinLabel = 'Spinning…';
-  else if (alreadySpun) spinLabel = 'Thanks for Playing';
 
   const cardContent = (
     <Grid container spacing={{ xs: 2, sm: 2.5, md: 3.5 }} alignItems="stretch">
@@ -344,45 +269,6 @@ export default function WinterSpinView() {
               onSpinComplete={handleSpinComplete}
             />
           </Box>
-
-          <Button
-            size="large"
-            variant="contained"
-            disabled={!canSpin}
-            onClick={handleSpin}
-            fullWidth
-            startIcon={
-              spinning ? (
-                <CircularProgress size={18} sx={{ color: 'inherit' }} />
-              ) : (
-                <Iconify icon="solar:restart-bold" />
-              )
-            }
-            sx={{
-              maxWidth: { xs: 1, sm: 300 },
-              py: { xs: 1.25, sm: 1.45 },
-              fontWeight: 800,
-              fontSize: { xs: '0.92rem', sm: '1rem' },
-              letterSpacing: 0.6,
-              textTransform: 'uppercase',
-              borderRadius: 2,
-              color: '#fff',
-              background: `linear-gradient(135deg, ${BRAND.orange} 0%, ${BRAND.gold} 52%, ${BRAND.blue} 100%)`,
-              boxShadow: `0 14px 30px ${alpha(BRAND.orange, 0.38)}`,
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-              '&:hover': {
-                boxShadow: `0 16px 34px ${alpha(BRAND.orange, 0.5)}`,
-                transform: 'translateY(-1px)',
-              },
-              '&.Mui-disabled': {
-                color: alpha('#fff', 0.75),
-                background: alpha('#fff', 0.14),
-                boxShadow: 'none',
-              },
-            }}
-          >
-            {spinLabel}
-          </Button>
 
           {error ? (
             <Alert
@@ -480,12 +366,14 @@ export default function WinterSpinView() {
         }}
       >
         <Stack alignItems="center" spacing={{ xs: 1, sm: 1.25 }} sx={{ mb: { xs: 2, md: 3 } }}>
-          <Logo
-            disabledLink
+          <Box
+            component="img"
+            alt="Refex"
+            src="/assets/refex-logo.png"
             sx={{
               height: { xs: 38, sm: 48, md: 54 },
               width: 'auto',
-              maxWidth: { xs: 170, sm: 220 },
+              maxWidth: { xs: 200, sm: 240 },
               objectFit: 'contain',
               filter: 'drop-shadow(0 8px 18px rgba(0,0,0,0.35))',
             }}
@@ -523,23 +411,6 @@ export default function WinterSpinView() {
             {CAMPAIGN_TAGLINE}
           </Typography>
 
-          {(name || phone) && (
-            <Stack
-              direction="row"
-              spacing={1}
-              useFlexGap
-              flexWrap="wrap"
-              justifyContent="center"
-              sx={{ width: 1, px: { xs: 0.5, sm: 0 } }}
-            >
-              {name ? (
-                <IdentityChip icon="solar:user-bold-duotone" label={name} tone="blue" />
-              ) : null}
-              {phone ? (
-                <IdentityChip icon="solar:phone-bold-duotone" label={phone} tone="orange" />
-              ) : null}
-            </Stack>
-          )}
         </Stack>
 
         <Card

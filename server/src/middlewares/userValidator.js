@@ -22,8 +22,9 @@ const validation = {
       .withMessage("Password must contain at least 6 characters"),
     check("role")
       .optional()
-      .isIn([Role.SuperAdmin, Role.Admin, Role.User])
+      .isIn([Role.SuperAdmin, Role.Admin, Role.User, Role.Campaign])
       .withMessage("Invalid Role type"),
+    check("pageAccess").optional().isArray().withMessage("Page access must be a list"),
   ],
   changePasswordSchema: [
     check("currentPassword")
@@ -61,8 +62,9 @@ const validation = {
     check("designation").optional().trim(),
     check("role")
       .optional()
-      .isIn([Role.SuperAdmin, Role.Admin, Role.User])
+      .isIn([Role.SuperAdmin, Role.Admin, Role.User, Role.Campaign])
       .withMessage("Invalid Role type"),
+    check("pageAccess").optional().isArray().withMessage("Page access must be a list"),
   ],
   validateLogin: [
     check("email")

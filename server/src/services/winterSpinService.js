@@ -6,7 +6,7 @@ const {
   WinterSpinToken,
 } = require("../models");
 
-/** Shared secret for Apps Script / backend to issue tokens. */
+/** Shared secret for trusted server-to-server token issue calls. */
 const ISSUE_API_KEY = process.env.WINTER_SPIN_API_KEY || "";
 /** Token lifetime in hours (default 72h). */
 const TOKEN_TTL_HOURS = Number(process.env.WINTER_SPIN_TOKEN_TTL_HOURS || 72);
@@ -16,9 +16,6 @@ const PUBLIC_BASE_URL = (
   process.env.CLIENT_URL ||
   "http://localhost:3030"
 ).replace(/\/$/, "");
-
-/** Optional Apps Script Web App URL — updates SpinAllow prize after spin. */
-const SHEET_WEBAPP_URL = (process.env.WINTER_SPIN_SHEET_WEBAPP_URL || "").trim();
 
 /**
  * Refex Winter Campaign — prize catalog & weekly caps (IST weeks).
@@ -136,10 +133,18 @@ function isCampaignActive(date = new Date()) {
 
 function normalizePhone(raw) {
   if (raw == null) return "";
-  const digits = String(raw).replace(/\D/g, "");
-  if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2);
-  if (digits.length === 11 && digits.startsWith("0")) return digits.slice(1);
-  return digits;
+  // Keep the country code. The public form stores dial code + national number.
+  return String(raw).replace(/\D/g, "").slice(0, 15);
+}
+
+function isValidPhone(digits) {
+  if (!/^\d{8,15}$/.test(digits)) return false;
+  // New Indian entries are 91 plus a 10-digit mobile. A 10-digit value that
+  // happens to start with 91 is an older national number, not a country code.
+  if (digits.startsWith("91") && digits.length !== 10) {
+    return /^91[6-9]\d{9}$/.test(digits);
+  }
+  return true;
 }
 
 function normalizeName(raw) {
@@ -158,14 +163,33 @@ function normalizeToken(raw) {
 function mapEntry(entry) {
   if (!entry) return null;
   return {
-    name: entry.name,
-    phone: entry.phone,
-    token: entry.token || null,
     prizeCode: entry.prize_code,
     prizeLabel: entry.prize_label,
     isWin: entry.is_win,
     weekKey: entry.week_key,
     spunAt: entry.spun_at,
+  };
+}
+
+async function openSpinSession(token) {
+  const cleanToken = normalizeToken(token);
+  if (!cleanToken) {
+    return { ok: false, status: 403, message: "Access denied." };
+  }
+
+  const record = await WinterSpinToken.findOne({ where: { token: cleanToken } });
+  if (!record) {
+    return { ok: false, status: 403, message: "Access denied." };
+  }
+  if (record.expires_at && new Date(record.expires_at).getTime() < Date.now()) {
+    return { ok: false, status: 403, message: "Access denied. This spin session has expired." };
+  }
+
+  return {
+    ok: true,
+    cleanName: normalizeName(record.name),
+    cleanPhone: record.phone,
+    cleanToken: record.token,
   };
 }
 
@@ -311,8 +335,8 @@ async function assertValidIssuedToken({ token, phone, name, forSpin = false }) {
   if (!cleanToken) {
     return { ok: false, status: 403, message: "Access denied. A valid token is required." };
   }
-  if (!/^\d{10}$/.test(cleanPhone)) {
-    return { ok: false, status: 400, message: "A valid 10-digit phone number is required." };
+  if (!isValidPhone(cleanPhone)) {
+    return { ok: false, status: 400, message: "A valid mobile number is required." };
   }
   if (!cleanName || cleanName.length < 2) {
     return { ok: false, status: 400, message: "Name is required." };
@@ -382,38 +406,27 @@ function isIssueApiKeyValid(providedKey) {
   return crypto.timingSafeEqual(a, b);
 }
 
-/**
- * Issue a one-time spin token (called by Google Apps Script / trusted backend).
- */
-async function issueSpinToken({ name, phone, apiKey }) {
-  if (!ISSUE_API_KEY) {
-    return {
-      ok: false,
-      status: 503,
-      message: "Token issuing is not configured (WINTER_SPIN_API_KEY).",
-    };
-  }
-  if (!isIssueApiKeyValid(apiKey)) {
-    const gotLen = String(apiKey || "").trim().length;
-    const needLen = String(ISSUE_API_KEY || "").trim().length;
-    return {
-      ok: false,
-      status: 401,
-      message: `Unauthorized. API key mismatch (received length ${gotLen}, expected length ${needLen}). Use the same WINTER_SPIN_API_KEY as the server.`,
-    };
-  }
+function buildSpinPath(name, phone, token) {
+  return `/winter-spin?name=${encodeURIComponent(name)}&phone=${encodeURIComponent(
+    phone
+  )}&token=${encodeURIComponent(token)}`;
+}
 
+/**
+ * Create or reuse a spin token. Used by our public campaign form.
+ */
+async function mintSpinAccess({ name, phone }) {
   const cleanName = normalizeName(name);
   const cleanPhone = normalizePhone(phone);
 
   if (!cleanName || cleanName.length < 2) {
     return { ok: false, status: 400, message: "Name is required." };
   }
-  if (!/^\d{10}$/.test(cleanPhone)) {
+  if (!isValidPhone(cleanPhone)) {
     return {
       ok: false,
       status: 400,
-      message: "A valid 10-digit phone number is required.",
+      message: "A valid mobile number is required.",
     };
   }
   if (!isCampaignActive()) {
@@ -433,17 +446,16 @@ async function issueSpinToken({ name, phone, apiKey }) {
     existing &&
     (!existing.expires_at || new Date(existing.expires_at).getTime() > Date.now())
   ) {
-    const spinUrl = `${PUBLIC_BASE_URL}/winter-spin?name=${encodeURIComponent(
-      existing.name
-    )}&phone=${encodeURIComponent(existing.phone)}&token=${encodeURIComponent(
-      existing.token
-    )}`;
+    const spinPath = buildSpinPath(existing.name, existing.phone, existing.token);
     return {
       ok: true,
       reused: true,
       token: existing.token,
+      name: existing.name,
+      phone: existing.phone,
       expiresAt: existing.expires_at,
-      spinUrl,
+      spinPath,
+      spinUrl: `${PUBLIC_BASE_URL}${spinPath}`,
     };
   }
 
@@ -459,17 +471,57 @@ async function issueSpinToken({ name, phone, apiKey }) {
     used_at: null,
   });
 
-  const spinUrl = `${PUBLIC_BASE_URL}/winter-spin?name=${encodeURIComponent(
-    cleanName
-  )}&phone=${encodeURIComponent(cleanPhone)}&token=${encodeURIComponent(token)}`;
+  const spinPath = buildSpinPath(cleanName, cleanPhone, token);
 
   return {
     ok: true,
     reused: false,
     token,
+    name: cleanName,
+    phone: cleanPhone,
     expiresAt,
-    spinUrl,
+    spinPath,
+    spinUrl: `${PUBLIC_BASE_URL}${spinPath}`,
   };
+}
+
+/**
+ * Trusted server-to-server issue. The public form uses mintSpinAccess directly.
+ */
+async function getSessionStatus(token) {
+  const session = await openSpinSession(token);
+  if (!session.ok) return { ok: false, status: session.status, error: session.message };
+  return getStatus({
+    phone: session.cleanPhone,
+    name: session.cleanName,
+    token: session.cleanToken,
+  });
+}
+
+async function spinSession({ token, ip, userAgent }) {
+  const session = await openSpinSession(token);
+  if (!session.ok) return { ok: false, status: session.status, message: session.message };
+  return spinOnce({
+    name: session.cleanName,
+    phone: session.cleanPhone,
+    token: session.cleanToken,
+    ip,
+    userAgent,
+  });
+}
+
+async function issueSpinToken({ name, phone, apiKey }) {
+  if (!ISSUE_API_KEY) {
+    return {
+      ok: false,
+      status: 503,
+      message: "Token issuing is not configured (WINTER_SPIN_API_KEY).",
+    };
+  }
+  if (!isIssueApiKeyValid(apiKey)) {
+    return { ok: false, status: 401, message: "Unauthorized." };
+  }
+  return mintSpinAccess({ name, phone });
 }
 
 async function getStatus({ phone, name, token }) {
@@ -491,7 +543,6 @@ async function getStatus({ phone, name, token }) {
 
   return {
     ok: true,
-    phone: access.cleanPhone,
     campaignActive,
     campaignEnd: CAMPAIGN_END,
     weekKey,
@@ -585,19 +636,6 @@ async function spinOnce({ name, phone, token, ip, userAgent }) {
       return { alreadySpun: false, entry, prize };
     });
 
-    // After spin completes: write Prize + Status=spun on the same SpinAllow row
-    if (result.entry) {
-      const entry = result.entry;
-      syncPrizeToSheet_({
-        phone: entry.phone,
-        token: entry.token,
-        prize: entry.prize_label || entry.prizeLabel,
-        prizeCode: entry.prize_code || entry.prizeCode,
-      }).catch((err) => {
-        console.warn("Winter spin Sheet prize sync failed:", err.message);
-      });
-    }
-
     return {
       ok: true,
       alreadySpun: result.alreadySpun,
@@ -613,14 +651,6 @@ async function spinOnce({ name, phone, token, ip, userAgent }) {
         where: { phone: cleanPhone },
       });
       if (entry) {
-        syncPrizeToSheet_({
-          phone: entry.phone,
-          token: entry.token,
-          prize: entry.prize_label,
-          prizeCode: entry.prize_code,
-        }).catch((err) => {
-          console.warn("Winter spin Sheet prize sync failed:", err.message);
-        });
         return {
           ok: true,
           alreadySpun: true,
@@ -633,60 +663,19 @@ async function spinOnce({ name, phone, token, ip, userAgent }) {
   }
 }
 
-/**
- * After spin: update SpinAllow Status=spun + Prize (gift) on the same row.
- * Uses GET query (Apps Script Web App POST redirects are unreliable from Node).
- */
-async function syncPrizeToSheet_({ phone, token, prize, prizeCode }) {
-  if (!SHEET_WEBAPP_URL || !ISSUE_API_KEY) {
-    console.warn(
-      "Winter spin Sheet prize sync skipped: set WINTER_SPIN_SHEET_WEBAPP_URL and WINTER_SPIN_API_KEY"
-    );
-    return;
-  }
-
-  const url = new URL(SHEET_WEBAPP_URL);
-  url.searchParams.set("action", "updatePrize");
-  url.searchParams.set("apiKey", ISSUE_API_KEY);
-  if (phone) url.searchParams.set("phone", phone);
-  if (token) url.searchParams.set("token", token);
-  if (prize) url.searchParams.set("prize", prize);
-  if (prizeCode) url.searchParams.set("prizeCode", prizeCode);
-  url.searchParams.set("status", "spun");
-
-  const res = await fetch(url.toString(), { method: "GET", redirect: "follow" });
-  const text = await res.text();
-  let body = null;
-  try {
-    body = JSON.parse(text);
-  } catch (_) {
-    body = null;
-  }
-
-  // A 200 HTML page (login / old Web App) is not a successful sheet update
-  if (!res.ok || !body || body.ok !== true) {
-    throw new Error(
-      `Sheet gift update failed (${res.status}): ${body?.message || text.slice(0, 220)}`
-    );
-  }
-
-  console.log(
-    "Winter spin Sheet gift updated:",
-    phone,
-    prizeCode || prize,
-    body?.row != null ? `row ${body.row}` : ""
-  );
-}
-
 module.exports = {
   PRIZES,
   PRIZE_BY_CODE,
   getWeekKey,
   isCampaignActive,
   normalizePhone,
+  isValidPhone,
   normalizeName,
   getStatus,
-  getStatusByPhone: getStatus, // backward-compatible name
+  getStatusByPhone: getStatus,
+  mintSpinAccess,
   issueSpinToken,
+  getSessionStatus,
+  spinSession,
   spinOnce,
 };

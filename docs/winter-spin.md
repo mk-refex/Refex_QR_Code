@@ -1,8 +1,8 @@
 # Refex Winter Campaign — Spin the Wheel
 
-Public contest page for the **Refex Winter Campaign**. Contestants open a **server-issued** link (after a Google Form) with their **name**, **phone**, and **token**, spin once, and receive a server-assigned prize.
+Public contest form and spin wheel for the **Refex Winter Campaign**. The customer fills our form (name, email, phone, bill upload, consent). The server stores the entry, saves the bill files, issues a one-time token, and opens the wheel. One email and one phone can register once. One phone can spin once. The prize is stored in `winter_spin_entries`.
 
-Random or guessed `token` values are **rejected**. Only tokens created by `POST /api/winter-spin/issue` (protected by `WINTER_SPIN_API_KEY`) work.
+Random or guessed `token` values are **rejected**.
 
 ---
 
@@ -10,9 +10,9 @@ Random or guessed `token` values are **rejected**. Only tokens created by `POST 
 
 | Environment | URL |
 |-------------|-----|
-| Local | `http://localhost:3030/winter-spin?name=...&phone=...&token=...` |
-| Alternate path | `/airport/winter_campaign?name=...&phone=...&token=...` |
-| Production | `https://YOUR-DOMAIN/winter-spin?name=...&phone=...&token=...` |
+| Form (local) | `http://localhost:3030/winter-campaign` |
+| Form (airport path) | `/airport/winter_campaign` |
+| Spin (after submit) | `/winter-spin` |
 
 ### Query parameters
 
@@ -25,67 +25,20 @@ Random or guessed `token` values are **rejected**. Only tokens created by `POST 
 **Example (after issue)**
 
 ```
-https://YOUR-DOMAIN/winter-spin?name=Murugesh%20Kumar&phone=9876543210&token=a1b2c3…(64 hex chars)
+https://YOUR-DOMAIN/winter-spin
 ```
 
 ---
 
-## How token protection works
+## How it works
 
-1. Google Form / Apps Script (or your backend) calls **`POST /api/winter-spin/issue`** with an API key + name + phone.
-2. Server stores a row in `winter_spin_tokens` and returns `spinUrl` (includes a 64-char hex token).
-3. User opens that URL. Status + spin APIs load the token from DB and require **exact match** on token + phone + name.
-4. On successful spin, `used_at` is set. Same phone cannot win again.
+1. Customer opens `/winter-campaign` and submits name, email, phone, consent, and 1–5 bill files (10 MB each).
+2. `POST /api/winter-campaign/register` stores `winter_campaign_submissions` and files under `server/uploads/winter-campaign/`.
+3. The server mints a token in `winter_spin_tokens` and stores it in an HttpOnly cookie. The browser opens `/winter-spin` with no name, phone, or token in the address bar.
+4. The browser opens `/winter-spin`. Status and spin require that token plus the same name and phone.
+5. The prize is saved on `winter_spin_entries`. The same email or phone cannot register again; the same phone cannot spin again.
 
-Without a DB row for that token → **403 Access denied**. Typing random characters in `token=` does not open the wheel.
-
----
-
-## Google Form / Apps Script setup
-
-1. Collect **Name**, **Phone**, and bill/invoice on the Google Form.
-2. On form submit, Apps Script calls the issue API, then redirects (or emails) the returned `spinUrl`.
-
-### Issue API
-
-```
-POST /api/winter-spin/issue
-Header: X-API-Key: <WINTER_SPIN_API_KEY>
-Content-Type: application/json
-
-{ "name": "Murugesh Kumar", "phone": "9876543210" }
-```
-
-**Success `results`**
-
-- `token` — hex string
-- `expiresAt` — expiry (default 72h, see env)
-- `spinUrl` — ready-to-open public link
-- `reused` — `true` if an unused non-expired token for that phone was reused
-
-### Apps Script sketch
-
-```javascript
-function onFormSubmit(e) {
-  const name = e.namedValues['Name'][0];
-  const phone = e.namedValues['Phone'][0];
-  const API = 'https://YOUR-API-HOST/api/winter-spin/issue';
-  const KEY = PropertiesService.getScriptProperties().getProperty('WINTER_SPIN_API_KEY');
-
-  const res = UrlFetchApp.fetch(API, {
-    method: 'post',
-    contentType: 'application/json',
-    headers: { 'X-API-Key': KEY },
-    payload: JSON.stringify({ name, phone }),
-    muteHttpExceptions: true,
-  });
-  const body = JSON.parse(res.getContentText());
-  const spinUrl = body.results && body.results.spinUrl;
-  // Redirect / email spinUrl to the contestant
-}
-```
-
-Store `WINTER_SPIN_API_KEY` in Apps Script **Script properties**, never in the form URL.
+A random `token` returns the 404 page.
 
 ---
 
@@ -131,7 +84,7 @@ When a capped category is exhausted for the week, it is no longer awarded until 
 
 Base path: `/api`
 
-### `GET /api/winter-spin/status?name=...&phone=...&token=...`
+### `GET /api/winter-spin/status`
 
 Validates the issued token, then returns campaign status / prior spin.
 
@@ -200,7 +153,7 @@ Set on the **server**:
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `WINTER_SPIN_API_KEY` | _(empty)_ | **Required** to issue tokens. Shared secret for Apps Script |
+| `WINTER_SPIN_API_KEY` | _(empty)_ | Only for trusted server-to-server `/issue` calls. The public form does not use it. |
 | `WINTER_SPIN_PUBLIC_BASE_URL` | `CLIENT_URL` or `http://localhost:3030` | Base used when building `spinUrl` |
 | `WINTER_SPIN_TOKEN_TTL_HOURS` | `72` | How long an issued link stays valid |
 | `WINTER_SPIN_START_DATE` | `2026-11-01` | Campaign start (IST date `YYYY-MM-DD`) |
@@ -212,15 +165,14 @@ Set on the **server**:
 
 ## Deploy checklist
 
-1. Set `WINTER_SPIN_API_KEY` (long random string) and `WINTER_SPIN_PUBLIC_BASE_URL` on the server.
-2. Deploy updated **client** and **server**.
-3. Restart the server so Sequelize creates `winter_spin_tokens`.
-4. Point Google Form Apps Script at `/api/winter-spin/issue` with the same API key.
-5. Test:
-   - Issue token → open `spinUrl` → spin → result + confetti  
-   - Same phone again → previous result  
-   - Random `token=` → Access denied  
-   - Missing `name`/`phone`/`token` → Access denied  
+1. Deploy updated **client** and **server**.
+2. Restart the server so Sequelize creates the campaign tables.
+3. Set `WINTER_SPIN_PUBLIC_BASE_URL` to the public site origin.
+4. Test:
+   - Open `/winter-campaign`, submit once, land on the wheel
+   - Same email or phone again → existing spin, no second entry
+   - Opening `/winter-spin` without the session cookie → 404
+   - Prize is stored in `winter_spin_entries`
 
 ---
 

@@ -9,6 +9,7 @@ const icon = (name) => (
 export const SECTIONS = {
   assets: 'assets',
   qrCode: 'qr_code',
+  campaign: 'campaign',
   administration: 'administration',
 };
 
@@ -24,6 +25,12 @@ export const adminSidebarNav = [
     path: '/qr_code/fixed_url',
     section: SECTIONS.qrCode,
     icon: icon('ic_cart'),
+  },
+  {
+    title: 'Winter Campaign',
+    path: '/campaign/review',
+    section: SECTIONS.campaign,
+    icon: icon('ic_analytics'),
   },
   {
     title: 'Administration',
@@ -45,6 +52,7 @@ export const sectionSubNav = {
     { title: 'Smart Link', path: '/qr_code/smart_link' },
     { title: 'Design QR', path: '/qr_code/design_qr' },
   ],
+  [SECTIONS.campaign]: [{ title: 'Entries and winners', path: '/campaign/review' }],
   [SECTIONS.administration]: [
     { title: 'User Management', path: '/users/list' },
     { title: 'SMTP Configuration', path: '/users/smtp-config' },
@@ -54,6 +62,7 @@ export const sectionSubNav = {
 };
 
 export const getSectionFromPath = (pathname) => {
+  if (pathname.startsWith('/campaign')) return SECTIONS.campaign;
   if (pathname.startsWith('/assets')) return SECTIONS.assets;
   if (pathname.startsWith('/qr_code')) return SECTIONS.qrCode;
   if (pathname.startsWith('/users')) return SECTIONS.administration;
