@@ -53,6 +53,10 @@ module.exports = (sequelize) => {
         type: DataTypes.STRING(512),
         allowNull: true,
       },
+      confirmation_sent_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
     },
     {
       sequelize,
