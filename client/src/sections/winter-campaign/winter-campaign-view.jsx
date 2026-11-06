@@ -22,48 +22,9 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Iconify from 'src/components/iconify';
 
 import { BRAND } from '../winter-spin/constants';
+import { DEFAULT_FORM_COPY } from './form-copy-defaults';
 
 // ----------------------------------------------------------------------
-
-const HOW_TO = [
-  'Make a qualifying purchase at a participating outlet in the Pune Airport retail zone. The amount, including taxes, must meet that outlet’s minimum on a single invoice.',
-  'Scan the campaign QR code on the danglers at the outlet, or on the flex banners across Pune Airport.',
-  'Complete this form with your full name, mobile number, email address, the retail outlet and its location, the invoice value, and a clear photograph of the original invoice. A boarding pass photo is optional.',
-  'Accept these terms. Each qualifying invoice can be entered once and receives one spin.',
-];
-
-const TERMS = [
-  '1. Participation is open only to Indian citizens aged eighteen (18) years and above, with a valid government-issued ID, who are travelling via Pune Airport during the Contest Period. It is not open to foreign nationals, NRIs, OCIs, PIOs, or to employees, agents, or contractors of the Organiser, including their immediate family members. The Organiser may ask for proof of eligibility and may reject entries that do not meet these criteria.',
-  '2. Eligible Persons must make a qualifying purchase at a participating outlet in the Pune Airport retail zone. Each outlet has a minimum purchase threshold, inclusive of taxes, which must be met on a single invoice. The outlets, locations, and minimums are listed on this form (Annexure I). After the purchase, the Participant may scan a campaign QR code on danglers at the outlet or on flex banners across Pune Airport. This form asks for full name, mobile number, email address, outlet and location, invoice value, and a clear photograph of the original invoice. A boarding pass photograph is optional. Submitting it is explicit consent to participate and to provide personal details to the Organiser. These terms must be accepted with the checkbox. Only this official form is considered. Each qualifying invoice is one entry. Duplicate, forged, or manipulated data, including altered invoices, is invalid and can lead to disqualification.',
-  '3. Each eligible Participant who meets the outlet minimum receives one entry and one spin, whatever the outlet and whatever the amount spent above the minimum. Each entry in a weekly bumper prize draw has an equal chance. The spin can show: (a) Better Luck Next Time; or (b) Eligible for Bumper Gift through Lucky Draw; or (c) a gift worth up to ₹2,000, ₹5,000, ₹7,000, or ₹10,000.',
-  '4. Outcomes (a) and (b) do not award an instant gift. All three outcomes remain eligible for the bumper gift through the lucky draw. A gift-category winner receives the corresponding instant gift from the Organiser, as set out in Annexure II. There are no cash gifts. The store manager contacts the Refex Floor Manager to verify the winning category before the gift is handed over.',
-  '5. Weekly bumper prize lucky draws are conducted at the end of each week. Eligible entries, including Participants who did not spin, are included through a manual chit process. Each valid entry receives a unique entry ID. Eligible IDs for that week are printed on chits and placed in a sealed draw box. The number of chits drawn matches the prizes allocated for that week. Chits are drawn by an independent member of the Organiser’s appointed team and checked against the campaign database. If a chit is invalid or the Participant cannot be reached within seven business days, the Organiser may draw a reserve chit. Winners must provide self-attested copies of government-issued identity and address proof by email or post. Further proof may be required. The winner may need to sign an acceptance and release form. Failure to comply within ten (10) days of notification forfeits the prize, and the Organiser may select another winner.',
-  '6. Prizes are subject to applicable tax deductions. A prize value above INR 10,000 attracts Tax Deducted at Source (TDS) under Section 393(3) of the Income Tax Act, 2025, currently at 30%. The winner pays the applicable TDS before claiming the prize, or authorises the Organiser to deduct the tax from the prize value where applicable. The winner shall cooperate with the Organiser, or any person nominated by it, on the procedure for claiming the prize.',
-  '7. Winners pay tax on “Net winning” by NEFT or RTGS to the Organiser. A TDS certificate is issued. Payment is made to the bank account the Organiser notifies to the Participant.',
-  '8. Prizes are shipped to the postal address the winner provides at the time of notification, and only after verification. If the winner pays the TDS in advance, the prize is shipped only after that tax is paid. The Organiser bears the shipping charges and is not liable for damage or loss in transit.',
-  '9. If the winner does not meet the tax obligation, the Organiser need not deliver the prize and may offer it to another eligible Participant. The Organiser is not liable for a Participant’s personal tax matters.',
-  '10. Prizes are non-transferable, non-negotiable, and cannot be exchanged for cash or any other item. If a prize is unavailable, the Organiser may substitute a prize of equal or lesser value.',
-  '11. This Contest is independent of offers made by outlets at Pune Airport. The Organiser is not liable for a dispute between a Participant and a retail outlet about such an offer.',
-  '12. Personal data, including name, contact details, and invoice information, is collected, processed, and retained by the Organiser and/or its group companies only for entry validation, operating spins, winner selection, prize distribution, legal compliance, and limited post-contest analytics. Data is kept for no more than ninety (90) days after the Contest ends, then deleted or anonymised unless the law requires longer. The Organiser does not share, sell, or disclose personal data without consent, except as required by law. Promotional consent can be withdrawn by writing to puneoperations@refex.co.in.',
-  '13. The Organiser is not responsible for technical failures, server outages, incomplete submissions, or human errors. Attempts to tamper with the Contest, including bots or automated entries, can lead to permanent disqualification and legal action. The Organiser is not liable for indirect or consequential loss, including loss of chance, from participation or from being unable to win or claim a prize.',
-  '14. The Organiser, its associates, and group companies are not liable for loss, expense, damage, personal injury, or death in connection with this Contest or a prize, except for liability that cannot be excluded by law. Overall liability will not exceed the actual value of the highest prize announced.',
-  '15. The Organiser and its employees, representatives, directors, agents, affiliates, group companies, and promoters are not liable for incorrect information, unauthorised interference, technical or human error in administration or processing, or injury or damage from participation or from receipt, use, or misuse of a prize.',
-  '16. In a force majeure event, including natural disasters, strikes, epidemics, regulatory restrictions, or any other event beyond the Organiser’s reasonable control, the Contest may be suspended, postponed, modified, or cancelled without notice. Amendments to these terms are binding once published.',
-  '17. If any part of the Contest cannot run as planned, including because of a virus, network failure, bugs, tampering, fraud, or technical failure, the Organiser may cancel, terminate, modify, or suspend the Contest, or invalidate affected entries.',
-  '18. The Organiser is not responsible for the warranty or guarantee of a prize. Winners must claim that from the manufacturer, service provider, or dealer, and must pay for any extended warranty. Winners release the Organiser from prize warranty obligations.',
-  '19. By participating, each person confirms that they have read and agree to these terms. Winners consent to use of their name, likeness, and city of residence for promotion, including social media, press, and follow-up content, without further payment. The Organiser’s decisions on eligibility, selection, and disqualification are final.',
-  '20. Instant gifts and weekly bumper prizes are in Annexure II. The Organiser may amend, substitute, or withdraw a prize without prior notice. Prizes cannot be transferred, refunded, or exchanged for cash or credit. Tax is borne by the Participant and must be paid before the prize is claimed.',
-  '21. Images, if any, are for representation only. Colour, size, and specifications may differ and can change without notice. Brand names and trademarks belong to their owners.',
-  '22. Participants and winners must not speak to the press or other media, or give interviews or comments about the Contest, without the Organiser’s prior written approval. They must not make negative or defamatory statements about the Contest, the Organiser, the prizes, sponsors, retail companies, or their associates, employees, or officers.',
-  '23. The Organiser and the Authority are not liable for loss, damage, delay, personal injury, disappointment, or other harm from participation in the Refex Winter Carnival, including interruption, modification, cancellation, or technical failure. Participants waive claims against the Organiser, the Authority, and their officers, employees, agents, and affiliates in relation to the Contest, the prizes, or the promotion.',
-  '24. These terms are governed by the laws of India. Disputes are subject to the exclusive jurisdiction of the courts at Chennai, Tamil Nadu.',
-  '25. These terms continue after the Contest Period ends.',
-  '26. For clarifications or support, contact the Organiser at puneoperations@refex.co.in.',
-  'Annexure II. Instant gifts: gifts worth up to ₹2,000, ₹5,000, ₹7,000, or ₹10,000. Weekly bumper prizes: gold or silver coins with indicative values of ₹41,000, ₹21,000, or ₹11,000.',
-];
-
-const CONSENT_TEXT =
-  'I accept these Terms & Conditions and give my explicit consent to participate in the Refex Winter Carnival and to provide my personal details to the Organiser.';
 
 const OUTLETS = [
   ['Magic Casa', 'Arrival', 1000],
@@ -264,6 +225,7 @@ export default function WinterCampaignView() {
   const [captchaAnswer, setCaptchaAnswer] = useState('');
   const [captchaLoading, setCaptchaLoading] = useState(true);
   const [periodLabel, setPeriodLabel] = useState('9th November 2026 – 15th January 2027');
+  const [copy, setCopy] = useState(DEFAULT_FORM_COPY);
 
   const loadCaptcha = async () => {
     setCaptchaLoading(true);
@@ -295,6 +257,13 @@ export default function WinterCampaignView() {
         const start = res.data?.results?.startLabel;
         const end = res.data?.results?.endLabel;
         if (!cancelled && start && end) setPeriodLabel(`${start} – ${end}`);
+      })
+      .catch(() => {});
+    axios
+      .get('/api/winter-campaign/form-copy')
+      .then((res) => {
+        const saved = res.data?.results?.copy;
+        if (!cancelled && saved) setCopy({ ...DEFAULT_FORM_COPY, ...saved });
       })
       .catch(() => {});
     return () => {
@@ -416,36 +385,32 @@ export default function WinterCampaignView() {
             sx={{ height: { xs: 32, sm: 42 }, width: 'auto', maxWidth: { xs: '62%', sm: 240 }, objectFit: 'contain' }}
           />
           <Typography variant="overline" sx={{ color: BRAND.gold, letterSpacing: { xs: 0.8, sm: 1.4 }, flexShrink: 0 }}>
-            Pune Airport
+            {copy.eyebrow}
           </Typography>
         </Stack>
 
         <Stack spacing={1.25}>
           <Typography variant="h3" sx={{ fontWeight: 800, lineHeight: 1.15, fontSize: { xs: '1.7rem', md: '2.4rem' } }}>
-            Refex Winter Carnival
+            {copy.title}
           </Typography>
           <Typography variant="h6" sx={{ color: BRAND.gold, fontWeight: 700 }}>
-            Shop & Win Contest at Pune International Airport
+            {copy.tagline}
           </Typography>
           <Typography variant="body2" sx={{ color: alpha('#fff', 0.82), maxWidth: 760 }}>
             Contest Period: {periodLabel}.
           </Typography>
           <Typography variant="body2" sx={{ color: alpha('#fff', 0.82), maxWidth: 760 }}>
-            Organised by Refex Airports Retail Private Limited, having its Registered Office at Second Floor,
-            Refex Towers, Sterling Road Signal, 313, Valluvar Kottam High Road, Nungambakkam, Chennai – 600034,
-            Tamil Nadu, the Master Concessionaire, Pune Airport.
+            {copy.organiser}
           </Typography>
           <Typography variant="body2" sx={{ color: alpha('#fff', 0.82), maxWidth: 760 }}>
-            The Refex Winter Carnival rewards passengers who shop at select retail outlets at Pune Airport
-            during the Contest Period. Participation is acceptance of the terms below. A qualifying purchase
-            on a single invoice gives one entry and one spin.
+            {copy.introduction}
           </Typography>
         </Stack>
 
         <Card sx={{ bgcolor: alpha('#fff', 0.04), color: '#fff', border: `1px solid ${alpha('#fff', 0.08)}` }}>
           <Stack spacing={1.25} sx={{ p: { xs: 2, sm: 3 } }}>
-            <Typography variant="h6">How to participate</Typography>
-            {HOW_TO.map((step, index) => (
+            <Typography variant="h6">{copy.howToTitle}</Typography>
+            {copy.howTo.map((step, index) => (
               <Stack key={step} direction="row" spacing={1.5} alignItems="flex-start">
                 <Box
                   sx={{
@@ -472,17 +437,12 @@ export default function WinterCampaignView() {
 
         <Card sx={{ bgcolor: alpha(BRAND.orange, 0.12), color: '#fff', border: `1px solid ${alpha(BRAND.orange, 0.28)}` }}>
           <Stack spacing={1} sx={{ p: { xs: 2, sm: 3 } }}>
-            <Typography variant="h6">Instant gifts and weekly bumper prizes</Typography>
-            <Typography variant="body2" sx={{ color: alpha('#fff', 0.88) }}>
-              The wheel can show Better Luck Next Time, Eligible for Bumper Gift through Lucky Draw, or a
-              gift worth up to ₹2,000, ₹5,000, ₹7,000, or ₹10,000. The first two do not include an instant
-              gift. All three remain eligible for the weekly bumper lucky draw.
-            </Typography>
-            <Typography variant="body2" sx={{ color: alpha('#fff', 0.88) }}>
-              Weekly bumper prizes are gold or silver coins with indicative values of ₹41,000, ₹21,000, or
-              ₹11,000. There are no cash gifts. An instant gift is handed over only after the store manager
-              confirms the winning category with the Refex Floor Manager.
-            </Typography>
+            <Typography variant="h6">{copy.prizesTitle}</Typography>
+            {copy.prizes.map((paragraph) => (
+              <Typography key={paragraph} variant="body2" sx={{ color: alpha('#fff', 0.88) }}>
+                {paragraph}
+              </Typography>
+            ))}
           </Stack>
         </Card>
 
@@ -496,19 +456,18 @@ export default function WinterCampaignView() {
           }}
         >
           <AccordionSummary expandIcon={<Iconify icon="eva:arrow-ios-downward-fill" sx={{ color: '#fff' }} />}>
-            <Typography fontWeight={700}>Terms and conditions</Typography>
+            <Typography fontWeight={700}>{copy.termsTitle}</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Stack spacing={1.25}>
-              {TERMS.map((item) => (
+              {copy.terms.map((item) => (
                 <Typography key={item} variant="body2" sx={{ color: alpha('#fff', 0.82) }}>
                   {item}
                 </Typography>
               ))}
             </Stack>
             <Typography variant="caption" sx={{ display: 'block', mt: 2, color: alpha('#fff', 0.65) }}>
-              The Organiser may amend these terms, and may substitute or withdraw a prize, once the change is
-              published. Images, if any, are for representation only.
+              {copy.termsNote}
             </Typography>
           </AccordionDetails>
         </Accordion>
@@ -517,11 +476,11 @@ export default function WinterCampaignView() {
           <Stack spacing={2.25} sx={{ p: { xs: 2, sm: 3 } }}>
             <Stack spacing={0.5}>
               <Typography variant="overline" sx={{ color: BRAND.gold }}>
-                Customer details
+                {copy.formKicker}
               </Typography>
-              <Typography variant="h5">Submit once to unlock your spin</Typography>
+              <Typography variant="h5">{copy.formTitle}</Typography>
               <Typography variant="body2" sx={{ color: alpha('#fff', 0.7) }}>
-                One entry per email and phone number. Required fields are marked.
+                {copy.formSubtitle}
               </Typography>
             </Stack>
 
@@ -558,7 +517,7 @@ export default function WinterCampaignView() {
               }
               label={
                 <Typography variant="body2" sx={{ color: alpha('#fff', 0.88), wordBreak: 'break-word' }}>
-                  {CONSENT_TEXT} *
+                  {copy.consent} *
                 </Typography>
               }
             />
@@ -674,9 +633,9 @@ export default function WinterCampaignView() {
             </Stack>
 
             <Stack spacing={1}>
-              <Typography variant="subtitle2">Invoice *</Typography>
+              <Typography variant="subtitle2">{copy.invoiceTitle} *</Typography>
               <Typography variant="caption" sx={{ color: alpha('#fff', 0.65) }}>
-                Clear photo of the original invoice. Up to 5 files. Max 10 MB each. JPG, PNG, WEBP, HEIC, or PDF.
+                {copy.invoiceHint}
               </Typography>
               <Button
                 variant="outlined"
@@ -684,7 +643,7 @@ export default function WinterCampaignView() {
                 disabled={loading}
                 sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' }, color: '#fff', borderColor: alpha('#fff', 0.3) }}
               >
-                Add file
+                {copy.invoiceButton}
                 <input hidden multiple type="file" accept="image/*,.pdf,.heic,.heif" onChange={onPickFiles} />
               </Button>
               {files.map((file) => (
@@ -710,9 +669,9 @@ export default function WinterCampaignView() {
             </Stack>
 
             <Stack spacing={1}>
-              <Typography variant="subtitle2">Boarding pass</Typography>
+              <Typography variant="subtitle2">{copy.boardingTitle}</Typography>
               <Typography variant="caption" sx={{ color: alpha('#fff', 0.65) }}>
-                Optional. One clear photo or PDF. Max 10 MB.
+                {copy.boardingHint}
               </Typography>
               <Button
                 variant="outlined"
@@ -720,7 +679,7 @@ export default function WinterCampaignView() {
                 disabled={loading}
                 sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' }, color: '#fff', borderColor: alpha('#fff', 0.3) }}
               >
-                {boardingPass ? 'Replace file' : 'Add boarding pass'}
+                {boardingPass ? copy.boardingReplace : copy.boardingButton}
                 <input hidden type="file" accept="image/*,.pdf,.heic,.heif" onChange={onPickBoardingPass} />
               </Button>
               {boardingPass ? (
@@ -741,7 +700,7 @@ export default function WinterCampaignView() {
             </Stack>
 
             <Stack spacing={0.75}>
-              <Typography variant="subtitle2">Security check *</Typography>
+              <Typography variant="subtitle2">{copy.securityTitle} *</Typography>
               <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
                 <Box
                   component="img"
@@ -792,7 +751,7 @@ export default function WinterCampaignView() {
                 </Typography>
               ) : (
                 <Typography variant="caption" sx={{ color: alpha('#fff', 0.62) }}>
-                  Type the characters in the image.
+                  {copy.securityHint}
                 </Typography>
               )}
             </Stack>
@@ -813,7 +772,7 @@ export default function WinterCampaignView() {
                 '&.Mui-disabled': { color: '#fff', bgcolor: BRAND.blue },
               }}
             >
-              {loading ? 'Submitting…' : 'Submit & Spin'}
+              {loading ? 'Submitting…' : copy.submitLabel}
             </Button>
           </Stack>
         </Card>

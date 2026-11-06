@@ -37,6 +37,7 @@ import { useAuth } from 'src/context/AuthContext';
 import Iconify from 'src/components/iconify';
 
 import WinterCampaignSpinDesk from './winter-campaign-spin-desk';
+import WinterCampaignFormDesign from './winter-campaign-form-design';
 
 // ----------------------------------------------------------------------
 
@@ -199,7 +200,7 @@ export default function WinterCampaignReview() {
   const [previewLoading, setPreviewLoading] = useState(false);
 
   const load = useCallback(async () => {
-    if (tab === 'prizes') {
+    if (tab === 'prizes' || tab === 'design') {
       setLoading(false);
       setError('');
       return;
@@ -366,7 +367,7 @@ export default function WinterCampaignReview() {
             Refex Winter Carnival
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Select a row for the full entry and files. Prize counts and contest dates are on the Prizes tab.
+            Select a row for the full entry and files. Prize counts are on Prizes. The public wording is on Form Design.
           </Typography>
         </Stack>
 
@@ -385,9 +386,10 @@ export default function WinterCampaignReview() {
             <Tab value="entries" label="Entries" />
             <Tab value="winners" label="Winners" />
             <Tab value="prizes" label="Prizes" />
+            <Tab value="design" label="Form Design" />
           </Tabs>
           <Box sx={{ flex: 1, display: { xs: 'none', sm: 'block' } }} />
-          {tab !== 'prizes' ? (
+          {tab === 'entries' || tab === 'winners' ? (
             <>
           <TextField
             size="small"
@@ -428,15 +430,16 @@ export default function WinterCampaignReview() {
           ) : null}
         </Stack>
 
-        {error && tab !== 'prizes' ? (
+        {error && (tab === 'entries' || tab === 'winners') ? (
           <Typography variant="body2" color="error">
             {error}
           </Typography>
         ) : null}
 
         {tab === 'prizes' ? <WinterCampaignSpinDesk canManage={canManage} /> : null}
+        {tab === 'design' ? <WinterCampaignFormDesign canManage={canManage} /> : null}
 
-        {tab !== 'prizes' ? (
+        {tab === 'entries' || tab === 'winners' ? (
         <>
         <Card>
           {isMobile ? (

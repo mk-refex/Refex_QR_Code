@@ -155,7 +155,7 @@ async function getCampaignConfig() {
     }
     configCache = rowToConfig(row);
   } catch (error) {
-    configCache = fallback;
+    return fallback;
   }
   return configCache;
 }

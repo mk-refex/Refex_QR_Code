@@ -29,6 +29,10 @@ module.exports = (sequelize) => {
         type: DataTypes.TEXT,
         allowNull: false,
       },
+      form_copy: {
+        type: DataTypes.TEXT("long"),
+        allowNull: true,
+      },
       updated_at: {
         type: DataTypes.DATE,
         allowNull: true,

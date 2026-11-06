@@ -7,6 +7,8 @@ const { authCheck, authAdmin, authPage } = require("../../middlewares/auth");
 const canViewCampaign = authPage("campaign");
 
 router.get("/winter-campaign/period", winterSpinController.campaignPeriod);
+router.get("/winter-campaign/form-copy", winterSpinController.formCopy);
+router.put("/winter-campaign/form-copy", authCheck, authAdmin, winterCampaignAdmin.saveFormCopy);
 router.get("/winter-campaign/spin-desk", authCheck, canViewCampaign, winterCampaignAdmin.getSpinDesk);
 router.put("/winter-campaign/spin-settings", authCheck, authAdmin, winterCampaignAdmin.saveSpinSettings);
 router.put("/winter-campaign/spin-stock", authCheck, authAdmin, winterCampaignAdmin.saveSpinStock);

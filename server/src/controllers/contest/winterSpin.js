@@ -2,6 +2,7 @@ const status = require("../../helpers/Response");
 const winterSpinService = require("../../services/winterSpinService");
 const winterCampaignService = require("../../services/winterCampaignService");
 const winterCaptchaService = require("../../services/winterCaptchaService");
+const winterFormCopy = require("../../services/winterFormCopy");
 
 const SPIN_COOKIE = "refex_spin";
 
@@ -172,6 +173,16 @@ module.exports = {
         500,
         "Unable to issue spin token. Please try again."
       );
+    }
+  },
+
+  formCopy: async (_req, res) => {
+    try {
+      const result = await winterFormCopy.getFormCopy();
+      return status.ResponseStatus(res, 200, "OK", result);
+    } catch (error) {
+      console.error("Winter form copy error:", error);
+      return status.ResponseStatus(res, 500, "Unable to load the form content.");
     }
   },
 

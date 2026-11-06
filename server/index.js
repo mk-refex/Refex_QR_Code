@@ -186,6 +186,20 @@ sequelize
 
     try {
       const qi = sequelize.getQueryInterface();
+      const settingsTable = await qi.describeTable("winter_campaign_settings");
+      if (!settingsTable.form_copy) {
+        await qi.addColumn("winter_campaign_settings", "form_copy", {
+          type: Sequelize.DataTypes.TEXT("long"),
+          allowNull: true,
+        });
+        console.log("Added winter_campaign_settings.form_copy column");
+      }
+    } catch (e) {
+      console.warn("Winter form copy schema check skipped:", e.message);
+    }
+
+    try {
+      const qi = sequelize.getQueryInterface();
       const apiTable = await qi.describeTable("api_config");
       const apiColumns = [
         {

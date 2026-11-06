@@ -1,6 +1,7 @@
 const status = require("../../helpers/Response");
 const winterCampaignAdminService = require("../../services/winterCampaignAdminService");
 const winterSpinService = require("../../services/winterSpinService");
+const winterFormCopy = require("../../services/winterFormCopy");
 
 module.exports = {
   listSubmissions: async (req, res) => {
@@ -110,6 +111,17 @@ module.exports = {
     } catch (error) {
       console.error("Winter spin stock error:", error);
       return status.ResponseStatus(res, 500, "Unable to save this week's prize counts.");
+    }
+  },
+
+  saveFormCopy: async (req, res) => {
+    try {
+      const result = await winterFormCopy.saveFormCopy(req.body || {});
+      if (!result.ok) return status.ResponseStatus(res, result.status || 400, result.message);
+      return status.ResponseStatus(res, 200, result.message, { copy: result.copy });
+    } catch (error) {
+      console.error("Winter form copy save error:", error);
+      return status.ResponseStatus(res, 500, "Unable to save the form content.");
     }
   },
 
