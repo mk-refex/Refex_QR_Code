@@ -28,13 +28,13 @@ import { BRAND } from '../winter-spin/constants';
 const HOW_TO = [
   'Make a qualifying purchase at a participating outlet in the Pune Airport retail zone. The amount, including taxes, must meet that outlet’s minimum on a single invoice.',
   'Scan the campaign QR code on the danglers at the outlet, or on the flex banners across Pune Airport.',
-  'Complete this form with your full name, mobile number, email address, the retail outlet and its location, the invoice value, a clear photograph of the original invoice, and a clear photograph of your boarding pass.',
+  'Complete this form with your full name, mobile number, email address, the retail outlet and its location, the invoice value, and a clear photograph of the original invoice. A boarding pass photo is optional.',
   'Accept these terms. Each qualifying invoice can be entered once and receives one spin.',
 ];
 
 const TERMS = [
   '1. Participation is open only to Indian citizens aged eighteen (18) years and above, with a valid government-issued ID, who are travelling via Pune Airport during the Contest Period. It is not open to foreign nationals, NRIs, OCIs, PIOs, or to employees, agents, or contractors of the Organiser, including their immediate family members. The Organiser may ask for proof of eligibility and may reject entries that do not meet these criteria.',
-  '2. Eligible Persons must make a qualifying purchase at a participating outlet in the Pune Airport retail zone. Each outlet has a minimum purchase threshold, inclusive of taxes, which must be met on a single invoice. The outlets, locations, and minimums are listed on this form (Annexure I). After the purchase, the Participant may scan a campaign QR code on danglers at the outlet or on flex banners across Pune Airport. This form asks for full name, mobile number, email address, outlet and location, invoice value, a clear photograph of the original invoice, and a clear photograph of the boarding pass. Submitting it is explicit consent to participate and to provide personal details to the Organiser. These terms must be accepted with the checkbox. Only this official form is considered. Each qualifying invoice is one entry. Duplicate, forged, or manipulated data, including altered invoices, is invalid and can lead to disqualification.',
+  '2. Eligible Persons must make a qualifying purchase at a participating outlet in the Pune Airport retail zone. Each outlet has a minimum purchase threshold, inclusive of taxes, which must be met on a single invoice. The outlets, locations, and minimums are listed on this form (Annexure I). After the purchase, the Participant may scan a campaign QR code on danglers at the outlet or on flex banners across Pune Airport. This form asks for full name, mobile number, email address, outlet and location, invoice value, and a clear photograph of the original invoice. A boarding pass photograph is optional. Submitting it is explicit consent to participate and to provide personal details to the Organiser. These terms must be accepted with the checkbox. Only this official form is considered. Each qualifying invoice is one entry. Duplicate, forged, or manipulated data, including altered invoices, is invalid and can lead to disqualification.',
   '3. Each eligible Participant who meets the outlet minimum receives one entry and one spin, whatever the outlet and whatever the amount spent above the minimum. Each entry in a weekly bumper prize draw has an equal chance. The spin can show: (a) Better Luck Next Time; or (b) Eligible for Bumper Gift through Lucky Draw; or (c) a gift worth up to ₹2,000, ₹5,000, ₹7,000, or ₹10,000.',
   '4. Outcomes (a) and (b) do not award an instant gift. All three outcomes remain eligible for the bumper gift through the lucky draw. A gift-category winner receives the corresponding instant gift from the Organiser, as set out in Annexure II. There are no cash gifts. The store manager contacts the Refex Floor Manager to verify the winning category before the gift is handed over.',
   '5. Weekly bumper prize lucky draws are conducted at the end of each week. Eligible entries, including Participants who did not spin, are included through a manual chit process. Each valid entry receives a unique entry ID. Eligible IDs for that week are printed on chits and placed in a sealed draw box. The number of chits drawn matches the prizes allocated for that week. Chits are drawn by an independent member of the Organiser’s appointed team and checked against the campaign database. If a chit is invalid or the Participant cannot be reached within seven business days, the Organiser may draw a reserve chit. Winners must provide self-attested copies of government-issued identity and address proof by email or post. Further proof may be required. The winner may need to sign an acceptance and release form. Failure to comply within ten (10) days of notification forfeits the prize, and the Organiser may select another winner.',
@@ -331,7 +331,7 @@ export default function WinterCampaignView() {
     const phoneMessage = phoneError(country, phone);
     const billMessage = billsError(files);
     const invoiceMessage = invoiceError(outlet, invoiceValue);
-    const passMessage = boardingPass ? fileTypeError(boardingPass, 'The boarding pass') : 'Upload a photo or PDF of your boarding pass.';
+    const passMessage = boardingPass ? fileTypeError(boardingPass, 'The boarding pass') : '';
     if (nameMessage) next.name = nameMessage;
     if (emailMessage) next.email = emailMessage;
     if (phoneMessage) next.phone = phoneMessage;
@@ -694,9 +694,9 @@ export default function WinterCampaignView() {
             </Stack>
 
             <Stack spacing={1}>
-              <Typography variant="subtitle2">Boarding pass *</Typography>
+              <Typography variant="subtitle2">Boarding pass</Typography>
               <Typography variant="caption" sx={{ color: alpha('#fff', 0.65) }}>
-                One clear photo or PDF. Max 10 MB.
+                Optional. One clear photo or PDF. Max 10 MB.
               </Typography>
               <Button
                 variant="outlined"

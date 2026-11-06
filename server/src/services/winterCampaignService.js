@@ -145,9 +145,10 @@ async function registerSubmission({
     removeUploaded(uploads);
     return { ok: false, status: 400, message: "You can upload up to 5 bill files." };
   }
-  if (!boardingPass || boardingPass.length !== 1) {
+  const passes = boardingPass || [];
+  if (passes.length > 1) {
     removeUploaded(uploads);
-    return { ok: false, status: 400, message: "Upload a clear photo or PDF of your boarding pass." };
+    return { ok: false, status: 400, message: "Upload one boarding pass." };
   }
 
   const access = await winterSpinService.mintSpinAccess({
@@ -176,7 +177,7 @@ async function registerSubmission({
 
     const billRows = [
       ...files.map((file) => ({ file, kind: "invoice" })),
-      ...boardingPass.map((file) => ({ file, kind: "boarding_pass" })),
+      ...passes.map((file) => ({ file, kind: "boarding_pass" })),
     ];
     await WinterCampaignBill.bulkCreate(
       billRows.map(({ file, kind }) => ({
