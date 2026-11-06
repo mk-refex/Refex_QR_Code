@@ -4,6 +4,7 @@ const {
   WinterSpinEntry,
   WinterSpinWeeklyStock,
   WinterSpinToken,
+  WinterCampaignSetting,
 } = require("../models");
 const winterCampaignEmailService = require("./winterCampaignEmailService");
 
@@ -74,15 +75,94 @@ const PRIZES = [
 
 const PRIZE_BY_CODE = Object.fromEntries(PRIZES.map((p) => [p.code, p]));
 
-const CAMPAIGN_END = process.env.WINTER_SPIN_END_DATE || "2027-01-15";
-const CAMPAIGN_START = process.env.WINTER_SPIN_START_DATE || "2026-11-09";
-
 /**
  * Opening estimate of spins per day, used only until this week has a real sample.
- * After that, the week's own pace spreads the six cash prizes across the days left.
+ * After that, the week's own pace spreads the gift prizes across the days left.
+ * The live value is stored in winter_campaign_settings and can be changed in the Prizes tab.
  */
 const EST_SPINS_PER_DAY = Number(process.env.WINTER_SPIN_EST_SPINS_PER_DAY || 50);
 const PACE_SAMPLE_SPINS = 8;
+const CAPPED_PRIZE_CODES = PRIZES.filter((prize) => prize.weeklyCap != null).map((prize) => prize.code);
+
+let configCache = null;
+
+function builtinCaps() {
+  const caps = {};
+  PRIZES.forEach((prize) => {
+    if (prize.weeklyCap != null) caps[prize.code] = prize.weeklyCap;
+  });
+  return caps;
+}
+
+function fallbackConfig() {
+  return {
+    startDate: process.env.WINTER_SPIN_START_DATE || "2026-11-09",
+    endDate: process.env.WINTER_SPIN_END_DATE || "2027-01-15",
+    estSpinsPerDay: Math.max(1, EST_SPINS_PER_DAY || 50),
+    defaultCaps: builtinCaps(),
+  };
+}
+
+function isRealIsoDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return false;
+  const [year, month, day] = String(value).split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+function parseCaps(raw) {
+  const base = builtinCaps();
+  let parsed = raw;
+  if (typeof raw === "string") {
+    try {
+      parsed = JSON.parse(raw);
+    } catch (error) {
+      parsed = null;
+    }
+  }
+  if (!parsed || typeof parsed !== "object") return base;
+  const caps = { ...base };
+  Object.keys(base).forEach((code) => {
+    const count = Number(parsed[code]);
+    if (Number.isInteger(count) && count >= 0 && count <= 500) caps[code] = count;
+  });
+  return caps;
+}
+
+function rowToConfig(row) {
+  return {
+    startDate: row.start_date,
+    endDate: row.end_date,
+    estSpinsPerDay: Math.max(1, Number(row.est_spins_per_day) || 50),
+    defaultCaps: parseCaps(row.default_caps),
+  };
+}
+
+async function getCampaignConfig() {
+  if (configCache) return configCache;
+  const fallback = fallbackConfig();
+  try {
+    let row = await WinterCampaignSetting.findByPk(1);
+    if (!row) {
+      row = await WinterCampaignSetting.create({
+        id: 1,
+        start_date: fallback.startDate,
+        end_date: fallback.endDate,
+        est_spins_per_day: fallback.estSpinsPerDay,
+        default_caps: JSON.stringify(fallback.defaultCaps),
+        updated_at: new Date(),
+      });
+    }
+    configCache = rowToConfig(row);
+  } catch (error) {
+    configCache = fallback;
+  }
+  return configCache;
+}
+
+function clearCampaignConfigCache() {
+  configCache = null;
+}
 
 function getIstParts(date = new Date()) {
   const fmt = new Intl.DateTimeFormat("en-CA", {
@@ -124,9 +204,9 @@ function getIstDateString(date = new Date()) {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
-function isCampaignActive(date = new Date()) {
-  const today = getIstDateString(date);
-  return today <= CAMPAIGN_END;
+async function isCampaignActive(date = new Date()) {
+  const config = await getCampaignConfig();
+  return getIstDateString(date) <= config.endDate;
 }
 
 function normalizePhone(raw) {
@@ -225,11 +305,11 @@ function getRemainingDaysInWeek(date = new Date()) {
  * uses the daily estimate; once eight people have spun, the week's own rate
  * takes over and a quiet week still gives out its six cash prizes.
  */
-function expectedFutureSpins(spinsSoFar, date = new Date()) {
+function expectedFutureSpins(spinsSoFar, date = new Date(), estSpinsPerDay = EST_SPINS_PER_DAY) {
   const futureDays = Math.max(0, getRemainingDaysInWeek(date) - 1);
   if (futureDays === 0) return 0;
 
-  const prior = Math.max(1, EST_SPINS_PER_DAY);
+  const prior = Math.max(1, Number(estSpinsPerDay) || EST_SPINS_PER_DAY);
   if (spinsSoFar < PACE_SAMPLE_SPINS) return futureDays * prior;
 
   const observed = spinsSoFar / Math.max(1, getIstWeekdayNumber(date));
@@ -237,9 +317,9 @@ function expectedFutureSpins(spinsSoFar, date = new Date()) {
 }
 
 /** True when this spin should take one of the week's remaining cash slots. */
-function shouldAwardCash(remainingSlots, spinsSoFar, date = new Date()) {
+function shouldAwardCash(remainingSlots, spinsSoFar, date = new Date(), estSpinsPerDay = EST_SPINS_PER_DAY) {
   if (remainingSlots <= 0) return false;
-  const horizon = expectedFutureSpins(spinsSoFar, date) + 1;
+  const horizon = expectedFutureSpins(spinsSoFar, date, estSpinsPerDay) + 1;
   const probability = Math.min(1, remainingSlots / horizon);
   const scale = 1_000_000;
   const threshold = Math.floor(probability * scale);
@@ -253,21 +333,19 @@ function pickOpenOutcome() {
 }
 
 async function ensureWeeklyStock(weekKey, transaction) {
-  const capped = PRIZES.filter((p) => p.weeklyCap != null);
+  const config = await getCampaignConfig();
+  const capped = PRIZES.filter((prize) => prize.weeklyCap != null);
   for (const prize of capped) {
-    const [row] = await WinterSpinWeeklyStock.findOrCreate({
+    await WinterSpinWeeklyStock.findOrCreate({
       where: { week_key: weekKey, prize_code: prize.code },
       defaults: {
         week_key: weekKey,
         prize_code: prize.code,
-        cap: prize.weeklyCap,
+        cap: config.defaultCaps[prize.code] ?? prize.weeklyCap,
         used: 0,
       },
       transaction,
     });
-    if (row.cap !== prize.weeklyCap) {
-      await row.update({ cap: prize.weeklyCap }, { transaction });
-    }
   }
 }
 
@@ -297,6 +375,7 @@ async function pickSecurePrize(weekKey, transaction) {
     transaction,
     lock: transaction.LOCK.UPDATE,
   });
+  const config = await getCampaignConfig();
   const spinsSoFar = await WinterSpinEntry.count({
     where: { week_key: weekKey },
     transaction,
@@ -311,7 +390,7 @@ async function pickSecurePrize(weekKey, transaction) {
 
   const remainingSlots = cashChoices.reduce((sum, row) => sum + row.weight, 0);
 
-  if (shouldAwardCash(remainingSlots, spinsSoFar)) {
+  if (shouldAwardCash(remainingSlots, spinsSoFar, new Date(), config.estSpinsPerDay)) {
     for (let attempt = 0; attempt < cashChoices.length; attempt += 1) {
       const picked = cryptoWeightedPick(cashChoices);
       if (!picked?.prize) break;
@@ -430,7 +509,7 @@ async function mintSpinAccess({ name, phone }) {
       message: "A valid mobile number is required.",
     };
   }
-  if (!isCampaignActive()) {
+  if (!(await isCampaignActive())) {
     return {
       ok: false,
       status: 403,
@@ -540,13 +619,14 @@ async function getStatus({ phone, name, token }) {
     where: { phone: access.cleanPhone },
   });
   const weekKey = getWeekKey();
-  const campaignActive = isCampaignActive();
+  const config = await getCampaignConfig();
+  const campaignActive = getIstDateString() <= config.endDate;
 
   return {
     ok: true,
     campaignActive,
-    campaignStart: CAMPAIGN_START,
-    campaignEnd: CAMPAIGN_END,
+    campaignStart: config.startDate,
+    campaignEnd: config.endDate,
     weekKey,
     alreadySpun: Boolean(entry),
     entry: mapEntry(entry),
@@ -571,7 +651,7 @@ async function spinOnce({ name, phone, token, ip, userAgent }) {
 
   const { cleanName, cleanPhone, cleanToken } = access;
 
-  if (!isCampaignActive()) {
+  if (!(await isCampaignActive())) {
     return {
       ok: false,
       status: 403,
@@ -673,11 +753,211 @@ async function spinOnce({ name, phone, token, ip, userAgent }) {
   }
 }
 
+function addIsoDays(iso, days) {
+  const [year, month, day] = iso.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + days);
+  const yy = date.getUTCFullYear();
+  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(date.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+function formatShortDate(iso) {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function formatOrdinalDate(iso) {
+  const [year, month, day] = iso.split("-").map(Number);
+  const monthName = new Date(Date.UTC(year, month - 1, day)).toLocaleString("en-GB", {
+    month: "long",
+    timeZone: "UTC",
+  });
+  const mod100 = day % 100;
+  const suffix = mod100 >= 11 && mod100 <= 13 ? "th" : { 1: "st", 2: "nd", 3: "rd" }[day % 10] || "th";
+  return `${day}${suffix} ${monthName} ${year}`;
+}
+
+function resolveWeekKey(input) {
+  if (!input) return getWeekKey();
+  if (!isRealIsoDate(input)) return null;
+  const [year, month, day] = String(input).split("-").map(Number);
+  return getWeekKey(new Date(Date.UTC(year, month - 1, day, 6, 30, 0)));
+}
+
+function readWholeCount(value, label) {
+  const count = Number(value);
+  if (!Number.isInteger(count) || count < 0 || count > 500) {
+    return { ok: false, message: `${label} must be a whole number from 0 to 500.` };
+  }
+  return { ok: true, value: count };
+}
+
+async function buildSpinDesk(weekKey) {
+  const config = await getCampaignConfig();
+  const currentWeek = getWeekKey();
+  const stocks = await WinterSpinWeeklyStock.findAll({ where: { week_key: weekKey } });
+  const stockByCode = Object.fromEntries(stocks.map((row) => [row.prize_code, row]));
+  const awardedRows = await WinterSpinEntry.findAll({
+    attributes: ["prize_code", [sequelize.fn("COUNT", sequelize.col("id")), "total"]],
+    where: { week_key: weekKey },
+    group: ["prize_code"],
+    raw: true,
+  });
+  const awardedByCode = Object.fromEntries(
+    awardedRows.map((row) => [row.prize_code, Number(row.total) || 0])
+  );
+  const weekEnd = addIsoDays(weekKey, 6);
+
+  return {
+    currentWeek,
+    weekKey,
+    weekLabel: `${formatShortDate(weekKey)} – ${formatShortDate(weekEnd)}`,
+    isCurrentWeek: weekKey === currentWeek,
+    startDate: config.startDate,
+    endDate: config.endDate,
+    startLabel: formatOrdinalDate(config.startDate),
+    endLabel: formatOrdinalDate(config.endDate),
+    estSpinsPerDay: config.estSpinsPerDay,
+    campaignActive: getIstDateString() <= config.endDate,
+    defaultCaps: config.defaultCaps,
+    prizes: PRIZES.map((prize) => {
+      const awarded = awardedByCode[prize.code] || 0;
+      if (prize.weeklyCap == null) {
+        return {
+          code: prize.code,
+          label: prize.label,
+          limited: false,
+          cap: null,
+          used: awarded,
+          remaining: null,
+        };
+      }
+      const stock = stockByCode[prize.code];
+      const cap = stock ? Number(stock.cap) : Number(config.defaultCaps[prize.code] ?? prize.weeklyCap);
+      const used = stock ? Number(stock.used) : 0;
+      return {
+        code: prize.code,
+        label: prize.label,
+        limited: true,
+        cap,
+        used,
+        remaining: Math.max(0, cap - used),
+        stored: Boolean(stock),
+      };
+    }),
+  };
+}
+
+async function getSpinDesk(weekInput) {
+  const weekKey = resolveWeekKey(weekInput);
+  if (!weekKey) return { ok: false, status: 400, message: "Choose a valid week." };
+  return { ok: true, desk: await buildSpinDesk(weekKey) };
+}
+
+async function getCampaignPeriod() {
+  const config = await getCampaignConfig();
+  return {
+    startDate: config.startDate,
+    endDate: config.endDate,
+    startLabel: formatOrdinalDate(config.startDate),
+    endLabel: formatOrdinalDate(config.endDate),
+    campaignActive: getIstDateString() <= config.endDate,
+  };
+}
+
+async function saveCampaignSettings(body) {
+  const startDate = String(body.startDate || "").trim();
+  const endDate = String(body.endDate || "").trim();
+  if (!isRealIsoDate(startDate) || !isRealIsoDate(endDate)) {
+    return { ok: false, status: 400, message: "Enter a valid start date and end date." };
+  }
+  if (startDate > endDate) {
+    return { ok: false, status: 400, message: "The end date must be on or after the start date." };
+  }
+  const pace = readWholeCount(body.estSpinsPerDay, "Expected spins per day");
+  if (!pace.ok) return { ok: false, status: 400, message: pace.message };
+  if (pace.value < 1) {
+    return { ok: false, status: 400, message: "Expected spins per day must be at least 1." };
+  }
+
+  const caps = {};
+  for (const code of CAPPED_PRIZE_CODES) {
+    const prize = PRIZE_BY_CODE[code];
+    const count = readWholeCount(body.defaultCaps?.[code], prize.shortLabel);
+    if (!count.ok) return { ok: false, status: 400, message: count.message };
+    caps[code] = count.value;
+  }
+
+  const payload = {
+    start_date: startDate,
+    end_date: endDate,
+    est_spins_per_day: pace.value,
+    default_caps: JSON.stringify(caps),
+    updated_at: new Date(),
+  };
+  const existing = await WinterCampaignSetting.findByPk(1);
+  if (existing) await existing.update(payload);
+  else await WinterCampaignSetting.create({ id: 1, ...payload });
+  clearCampaignConfigCache();
+  const weekKey = resolveWeekKey(body.weekKey) || getWeekKey();
+  return { ok: true, message: "Contest settings saved.", desk: await buildSpinDesk(weekKey) };
+}
+
+async function saveWeekStock({ weekKey: weekInput, caps }) {
+  const weekKey = resolveWeekKey(weekInput);
+  if (!weekKey) return { ok: false, status: 400, message: "Choose a valid week." };
+
+  const existing = await WinterSpinWeeklyStock.findAll({ where: { week_key: weekKey } });
+  const byCode = Object.fromEntries(existing.map((row) => [row.prize_code, row]));
+  const nextCaps = {};
+  for (const code of CAPPED_PRIZE_CODES) {
+    const prize = PRIZE_BY_CODE[code];
+    const count = readWholeCount(caps?.[code], prize.shortLabel);
+    if (!count.ok) return { ok: false, status: 400, message: count.message };
+    const used = byCode[code] ? Number(byCode[code].used) : 0;
+    if (count.value < used) {
+      return {
+        ok: false,
+        status: 400,
+        message: `${prize.shortLabel} has already been given ${used} time${used === 1 ? "" : "s"} this week. The count cannot be lower than that.`,
+      };
+    }
+    nextCaps[code] = count.value;
+  }
+
+  await sequelize.transaction(async (transaction) => {
+    for (const code of CAPPED_PRIZE_CODES) {
+      const row = byCode[code];
+      if (row) {
+        await row.update({ cap: nextCaps[code] }, { transaction });
+      } else {
+        await WinterSpinWeeklyStock.create(
+          { week_key: weekKey, prize_code: code, cap: nextCaps[code], used: 0 },
+          { transaction }
+        );
+      }
+    }
+  });
+
+  return { ok: true, message: "This week's prize counts are saved.", desk: await buildSpinDesk(weekKey) };
+}
+
 module.exports = {
   PRIZES,
   PRIZE_BY_CODE,
   getWeekKey,
   isCampaignActive,
+  getCampaignPeriod,
+  getSpinDesk,
+  saveCampaignSettings,
+  saveWeekStock,
   normalizePhone,
   isValidPhone,
   normalizeName,

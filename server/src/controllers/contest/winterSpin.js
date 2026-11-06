@@ -175,6 +175,16 @@ module.exports = {
     }
   },
 
+  campaignPeriod: async (_req, res) => {
+    try {
+      const period = await winterSpinService.getCampaignPeriod();
+      return status.ResponseStatus(res, 200, "OK", period);
+    } catch (error) {
+      console.error("Winter campaign period error:", error);
+      return status.ResponseStatus(res, 500, "Unable to load the contest period.");
+    }
+  },
+
   spin: async (req, res) => {
     try {
       const result = await winterSpinService.spinSession({

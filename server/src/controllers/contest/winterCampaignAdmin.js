@@ -1,5 +1,6 @@
 const status = require("../../helpers/Response");
 const winterCampaignAdminService = require("../../services/winterCampaignAdminService");
+const winterSpinService = require("../../services/winterSpinService");
 
 module.exports = {
   listSubmissions: async (req, res) => {
@@ -76,6 +77,39 @@ module.exports = {
     } catch (error) {
       console.error("Winter campaign delete error:", error);
       return status.ResponseStatus(res, 500, "Unable to remove the entry.");
+    }
+  },
+
+  getSpinDesk: async (req, res) => {
+    try {
+      const result = await winterSpinService.getSpinDesk(req.query.week);
+      if (!result.ok) return status.ResponseStatus(res, result.status || 400, result.message);
+      return status.ResponseStatus(res, 200, "OK", result.desk);
+    } catch (error) {
+      console.error("Winter spin desk error:", error);
+      return status.ResponseStatus(res, 500, "Unable to load the prize settings.");
+    }
+  },
+
+  saveSpinSettings: async (req, res) => {
+    try {
+      const result = await winterSpinService.saveCampaignSettings(req.body || {});
+      if (!result.ok) return status.ResponseStatus(res, result.status || 400, result.message);
+      return status.ResponseStatus(res, 200, result.message, result.desk);
+    } catch (error) {
+      console.error("Winter spin settings error:", error);
+      return status.ResponseStatus(res, 500, "Unable to save the contest settings.");
+    }
+  },
+
+  saveSpinStock: async (req, res) => {
+    try {
+      const result = await winterSpinService.saveWeekStock(req.body || {});
+      if (!result.ok) return status.ResponseStatus(res, result.status || 400, result.message);
+      return status.ResponseStatus(res, 200, result.message, result.desk);
+    } catch (error) {
+      console.error("Winter spin stock error:", error);
+      return status.ResponseStatus(res, 500, "Unable to save this week's prize counts.");
     }
   },
 

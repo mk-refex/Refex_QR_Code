@@ -36,6 +36,8 @@ import { useAuth } from 'src/context/AuthContext';
 
 import Iconify from 'src/components/iconify';
 
+import WinterCampaignSpinDesk from './winter-campaign-spin-desk';
+
 // ----------------------------------------------------------------------
 
 function formatWhen(value) {
@@ -197,6 +199,11 @@ export default function WinterCampaignReview() {
   const [previewLoading, setPreviewLoading] = useState(false);
 
   const load = useCallback(async () => {
+    if (tab === 'prizes') {
+      setLoading(false);
+      setError('');
+      return;
+    }
     setLoading(true);
     setError('');
     const path = tab === 'winners' ? '/api/winter-campaign/winners' : '/api/winter-campaign/submissions';
@@ -359,7 +366,7 @@ export default function WinterCampaignReview() {
             Refex Winter Carnival
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            9 Nov 2026 – 15 Jan 2027. Select a row for the full entry and files.
+            Select a row for the full entry and files. Prize counts and contest dates are on the Prizes tab.
           </Typography>
         </Stack>
 
@@ -377,8 +384,11 @@ export default function WinterCampaignReview() {
           >
             <Tab value="entries" label="Entries" />
             <Tab value="winners" label="Winners" />
+            <Tab value="prizes" label="Prizes" />
           </Tabs>
           <Box sx={{ flex: 1, display: { xs: 'none', sm: 'block' } }} />
+          {tab !== 'prizes' ? (
+            <>
           <TextField
             size="small"
             fullWidth={isMobile}
@@ -414,14 +424,20 @@ export default function WinterCampaignReview() {
           >
             Export
           </Button>
+            </>
+          ) : null}
         </Stack>
 
-        {error ? (
+        {error && tab !== 'prizes' ? (
           <Typography variant="body2" color="error">
             {error}
           </Typography>
         ) : null}
 
+        {tab === 'prizes' ? <WinterCampaignSpinDesk canManage={canManage} /> : null}
+
+        {tab !== 'prizes' ? (
+        <>
         <Card>
           {isMobile ? (
             <Box>
@@ -651,6 +667,8 @@ export default function WinterCampaignReview() {
             onChange={(_event, value) => setPage(value)}
           />
         </Stack>
+        </>
+        ) : null}
       </Stack>
 
       <Dialog open={Boolean(detailRow)} onClose={closeDetail} fullScreen={isMobile} fullWidth maxWidth="md">

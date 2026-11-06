@@ -263,6 +263,7 @@ export default function WinterCampaignView() {
   const [captcha, setCaptcha] = useState(null);
   const [captchaAnswer, setCaptchaAnswer] = useState('');
   const [captchaLoading, setCaptchaLoading] = useState(true);
+  const [periodLabel, setPeriodLabel] = useState('9th November 2026 – 15th January 2027');
 
   const loadCaptcha = async () => {
     setCaptchaLoading(true);
@@ -284,6 +285,21 @@ export default function WinterCampaignView() {
 
   useEffect(() => {
     loadCaptcha();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    axios
+      .get('/api/winter-campaign/period')
+      .then((res) => {
+        const start = res.data?.results?.startLabel;
+        const end = res.data?.results?.endLabel;
+        if (!cancelled && start && end) setPeriodLabel(`${start} – ${end}`);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const onPickFiles = (event) => {
@@ -412,7 +428,7 @@ export default function WinterCampaignView() {
             Shop & Win Contest at Pune International Airport
           </Typography>
           <Typography variant="body2" sx={{ color: alpha('#fff', 0.82), maxWidth: 760 }}>
-            Contest Period: 9th November 2026 – 15th January 2027.
+            Contest Period: {periodLabel}.
           </Typography>
           <Typography variant="body2" sx={{ color: alpha('#fff', 0.82), maxWidth: 760 }}>
             Organised by Refex Airports Retail Private Limited, having its Registered Office at Second Floor,
