@@ -14,6 +14,7 @@ router.put("/winter-campaign/submissions/:id", authCheck, authAdmin, winterCampa
 router.delete("/winter-campaign/submissions/:id", authCheck, authAdmin, winterCampaignAdmin.deleteSubmission);
 router.delete("/winter-campaign/winners/:id", authCheck, authAdmin, winterCampaignAdmin.deleteWinner);
 
+router.get("/winter-campaign/captcha", winterSpinController.issueCaptcha);
 router.post("/winter-campaign/register", uploadBills, winterSpinController.register);
 router.get("/winter-spin/status", winterSpinController.getStatus);
 router.post("/winter-spin/issue", winterSpinController.issue);

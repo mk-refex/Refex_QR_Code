@@ -3,6 +3,7 @@ const path = require("path");
 const { Op } = require("sequelize");
 const { WinterCampaignSubmission, WinterCampaignBill } = require("../models");
 const winterSpinService = require("./winterSpinService");
+const winterCaptchaService = require("./winterCaptchaService");
 
 function normalizeEmail(raw) {
   return String(raw || "").trim().toLowerCase();
@@ -27,7 +28,34 @@ function removeUploaded(files) {
   });
 }
 
-async function registerSubmission({ name, email, phone, consent, files, ip, userAgent }) {
+async function registerSubmission({
+  name,
+  email,
+  phone,
+  consent,
+  files,
+  ip,
+  userAgent,
+  captchaToken,
+  captchaAnswer,
+}) {
+  if (!winterCaptchaService.allowRegister(ip)) {
+    removeUploaded(files);
+    return {
+      ok: false,
+      status: 429,
+      message: "Too many attempts. Please wait a few minutes and try again.",
+    };
+  }
+  if (!winterCaptchaService.verifyCaptcha(captchaToken, captchaAnswer)) {
+    removeUploaded(files);
+    return {
+      ok: false,
+      status: 400,
+      message: "Enter the security code shown in the image.",
+    };
+  }
+
   const cleanEmail = normalizeEmail(email);
   const cleanName = winterSpinService.normalizeName(name);
   const cleanPhone = winterSpinService.normalizePhone(phone);

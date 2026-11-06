@@ -1,6 +1,7 @@
 const status = require("../../helpers/Response");
 const winterSpinService = require("../../services/winterSpinService");
 const winterCampaignService = require("../../services/winterCampaignService");
+const winterCaptchaService = require("../../services/winterCaptchaService");
 
 const SPIN_COOKIE = "refex_spin";
 
@@ -86,6 +87,18 @@ module.exports = {
     }
   },
 
+  issueCaptcha: async (req, res) => {
+    try {
+      if (!winterCaptchaService.allowIssue(clientIp(req))) {
+        return status.ResponseStatus(res, 429, "Too many requests. Please wait and try again.");
+      }
+      return status.ResponseStatus(res, 200, "OK", winterCaptchaService.createCaptcha());
+    } catch (error) {
+      console.error("Winter campaign captcha error:", error);
+      return status.ResponseStatus(res, 500, "Unable to load the security check.");
+    }
+  },
+
   register: async (req, res) => {
     try {
       const result = await winterCampaignService.registerSubmission({
@@ -96,6 +109,8 @@ module.exports = {
         files: req.files || [],
         ip: clientIp(req),
         userAgent: req.headers["user-agent"],
+        captchaToken: req.body.captchaToken || "",
+        captchaAnswer: req.body.captchaAnswer || "",
       });
 
       if (!result.ok) {

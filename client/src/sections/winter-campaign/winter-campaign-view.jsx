@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
@@ -8,6 +8,7 @@ import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import MenuItem from '@mui/material/MenuItem';
+import IconButton from '@mui/material/IconButton';
 import Checkbox from '@mui/material/Checkbox';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -169,6 +170,31 @@ export default function WinterCampaignView() {
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [captcha, setCaptcha] = useState(null);
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
+  const [captchaLoading, setCaptchaLoading] = useState(true);
+
+  const loadCaptcha = async () => {
+    setCaptchaLoading(true);
+    setCaptchaAnswer('');
+    try {
+      const res = await axios.get('/api/winter-campaign/captcha');
+      setCaptcha(res.data?.results || null);
+      setErrors((prev) => ({ ...prev, captcha: '' }));
+    } catch (err) {
+      setCaptcha(null);
+      setErrors((prev) => ({
+        ...prev,
+        captcha: err.response?.data?.message || 'Unable to load the security check.',
+      }));
+    } finally {
+      setCaptchaLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCaptcha();
+  }, []);
 
   const onPickFiles = (event) => {
     const picked = Array.from(event.target.files || []);
@@ -210,6 +236,8 @@ export default function WinterCampaignView() {
     if (phoneMessage) next.phone = phoneMessage;
     if (!consent) next.consent = 'Please agree to the terms to continue.';
     if (billMessage) next.bills = billMessage;
+    if (!captchaAnswer.trim()) next.captcha = 'Enter the security code.';
+    else if (!captcha?.token) next.captcha = 'Refresh the security code and try again.';
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -224,6 +252,8 @@ export default function WinterCampaignView() {
     body.append('email', email.trim());
     body.append('phone', `${country.dial}${nationalNumber(phone)}`);
     body.append('consent', 'true');
+    body.append('captchaToken', captcha?.token || '');
+    body.append('captchaAnswer', captchaAnswer.trim());
     files.forEach((file) => body.append('bills', file));
 
     try {
@@ -232,12 +262,14 @@ export default function WinterCampaignView() {
       if (!res.data?.status) {
         setLoading(false);
         setFormError(res.data?.message || 'Unable to submit right now. Please try again.');
+        loadCaptcha();
         return;
       }
       navigate('/winter-spin');
     } catch (err) {
       setLoading(false);
       setFormError(err.response?.data?.message || 'Unable to submit right now. Please try again.');
+      loadCaptcha();
     }
   };
 
@@ -495,6 +527,63 @@ export default function WinterCampaignView() {
               ) : null}
             </Stack>
 
+            <Stack spacing={0.75}>
+              <Typography variant="subtitle2">Security check *</Typography>
+              <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
+                <Box
+                  component="img"
+                  alt="Security code"
+                  src={captchaLoading ? undefined : captcha?.image}
+                  sx={{
+                    width: { xs: 124, sm: 148 },
+                    height: 46,
+                    flexShrink: 0,
+                    borderRadius: 1,
+                    objectFit: 'fill',
+                    bgcolor: '#0E2438',
+                    border: `1px solid ${alpha('#fff', 0.16)}`,
+                  }}
+                />
+                <IconButton
+                  aria-label="New security code"
+                  onClick={loadCaptcha}
+                  disabled={loading || captchaLoading}
+                  sx={{ color: '#fff', flexShrink: 0, p: 0.75 }}
+                >
+                  {captchaLoading ? (
+                    <CircularProgress size={18} sx={{ color: '#fff' }} />
+                  ) : (
+                    <Iconify icon="eva:refresh-outline" width={20} />
+                  )}
+                </IconButton>
+                <TextField
+                  required
+                  size="small"
+                  fullWidth
+                  label="Code"
+                  value={captchaAnswer}
+                  disabled={loading}
+                  autoComplete="off"
+                  error={Boolean(errors.captcha)}
+                  inputProps={{ maxLength: 8, autoCapitalize: 'characters', 'aria-label': 'Security code' }}
+                  onChange={(e) => {
+                    setCaptchaAnswer(e.target.value.toUpperCase());
+                    setErrors((prev) => ({ ...prev, captcha: '' }));
+                  }}
+                  sx={fieldSx}
+                />
+              </Stack>
+              {errors.captcha ? (
+                <Typography variant="caption" sx={{ color: '#FFB4A8' }}>
+                  {errors.captcha}
+                </Typography>
+              ) : (
+                <Typography variant="caption" sx={{ color: alpha('#fff', 0.62) }}>
+                  Type the characters in the image.
+                </Typography>
+              )}
+            </Stack>
+
             <Button
               type="submit"
               size="large"
@@ -511,7 +600,7 @@ export default function WinterCampaignView() {
                 '&.Mui-disabled': { color: '#fff', bgcolor: BRAND.blue },
               }}
             >
-              {loading ? 'Submitting…' : 'Submit and spin'}
+              {loading ? 'Submitting…' : 'Submit & Spin'}
             </Button>
           </Stack>
         </Card>
