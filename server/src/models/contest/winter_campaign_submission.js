@@ -36,6 +36,18 @@ module.exports = (sequelize) => {
         allowNull: false,
         defaultValue: false,
       },
+      address: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      outlet: {
+        type: DataTypes.STRING(120),
+        allowNull: true,
+      },
+      invoice_value: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: true,
+      },
       token: {
         type: DataTypes.STRING(64),
         allowNull: true,

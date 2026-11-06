@@ -29,7 +29,7 @@ module.exports = {
         "Content-Type",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       );
-      res.setHeader("Content-Disposition", 'attachment; filename="winter-campaign.xlsx"');
+      res.setHeader("Content-Disposition", 'attachment; filename="winter-carnival.xlsx"');
       return res.send(buffer);
     } catch (error) {
       console.error("Winter campaign export error:", error);

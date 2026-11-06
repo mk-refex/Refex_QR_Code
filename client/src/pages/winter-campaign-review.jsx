@@ -6,7 +6,7 @@ export default function WinterCampaignReviewPage() {
   return (
     <>
       <Helmet>
-        <title>Winter Campaign | Refex</title>
+        <title>Refex Winter Carnival | Refex</title>
       </Helmet>
       <WinterCampaignReview />
     </>

@@ -81,7 +81,7 @@ function ResultPlaceholder() {
         variant="body2"
         sx={{ mt: 1, color: alpha('#fff', 0.72), maxWidth: 300, lineHeight: 1.55 }}
       >
-        Spin the wheel to reveal your Winter Campaign reward.
+        Spin the wheel to reveal your Winter Carnival reward.
       </Typography>
     </Box>
   );
@@ -130,7 +130,7 @@ export default function WinterSpinView() {
 
     async function load() {
       if (window.location.search) {
-        window.history.replaceState({}, '', '/winter-spin');
+        window.history.replaceState({}, '', '/winter-carnival/spin');
       }
 
       try {
@@ -144,7 +144,7 @@ export default function WinterSpinView() {
           setShowResult(true);
         }
         if (!data?.campaignActive) {
-          setError('The Refex Winter Campaign spin period has ended.');
+          setError('The Refex Winter Carnival contest is over.');
         }
         if (!cancelled) {
           setReady(true);

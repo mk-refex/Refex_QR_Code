@@ -117,13 +117,15 @@ export default function Router() {
           ],
         },
         {
-          path: 'campaign',
+          path: 'carnival',
           element: <PrivateRoute allowedPage="campaign" element={<Outlet />} />,
           children: [
-            { element: <Navigate to="/campaign/review" />, index: true },
+            { element: <Navigate to="/carnival/review" />, index: true },
             { path: 'review', element: <WinterCampaignReviewPage /> },
           ],
         },
+        { path: 'campaign', element: <Navigate to="/carnival/review" replace /> },
+        { path: 'campaign/review', element: <Navigate to="/carnival/review" replace /> },
         {
           path: 'users',
           element: <PrivateRoute allowedRoles={ADMIN_ROLES} element={<Outlet />} />,
@@ -162,16 +164,24 @@ export default function Router() {
       children: [
         { element: <Navigate to="/airport/fly_buy_summer" />, index: true },
         { path: 'fly_buy_summer', element: <ContestFormPage /> },
-        { path: 'winter_campaign', element: <WinterCampaignPage /> },
+        { path: 'winter_carnival', element: <WinterCampaignPage /> },
+        { path: 'winter_campaign', element: <Navigate to="/airport/winter_carnival" replace /> },
+      ],
+    },
+    {
+      path: 'winter-carnival',
+      children: [
+        { element: <WinterCampaignPage />, index: true },
+        { path: 'spin', element: <WinterSpinPage /> },
       ],
     },
     {
       path: 'winter-campaign',
-      element: <WinterCampaignPage />,
+      element: <Navigate to="/winter-carnival" replace />,
     },
     {
       path: 'winter-spin',
-      element: <WinterSpinPage />,
+      element: <Navigate to="/winter-carnival/spin" replace />,
     },
     {
       path: 'brochure_form',

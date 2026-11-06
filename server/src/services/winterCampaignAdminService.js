@@ -45,7 +45,13 @@ function mapBill(bill) {
     originalName: bill.original_name,
     mimeType: bill.mime_type,
     sizeBytes: bill.size_bytes,
+    kind: bill.kind || "invoice",
   };
+}
+
+function prizeLabelFor(entry) {
+  const catalog = winterSpinService.PRIZE_BY_CODE[entry.prize_code];
+  return catalog ? catalog.label : entry.prize_label;
 }
 
 function mapPrize(entry) {
@@ -53,7 +59,7 @@ function mapPrize(entry) {
   return {
     id: entry.id,
     prizeCode: entry.prize_code,
-    prizeLabel: entry.prize_label,
+    prizeLabel: prizeLabelFor(entry),
     isWin: entry.is_win,
     spunAt: entry.spun_at,
   };
@@ -61,14 +67,14 @@ function mapPrize(entry) {
 
 async function listSubmissions(query) {
   const { page, limit, offset } = paging(query);
-  const where = searchWhere(query.search, ["name", "email", "phone"]);
+  const where = searchWhere(query.search, ["name", "email", "phone", "outlet"]);
   const { rows, count } = await WinterCampaignSubmission.findAndCountAll({
     where,
     include: [
       {
         model: WinterCampaignBill,
         as: "bills",
-        attributes: ["id", "original_name", "mime_type", "size_bytes"],
+        attributes: ["id", "original_name", "mime_type", "size_bytes", "kind"],
       },
     ],
     order: [["created_at", "DESC"]],
@@ -93,6 +99,9 @@ async function listSubmissions(query) {
       name: row.name,
       email: row.email,
       phone: row.phone,
+      address: row.address || "",
+      outlet: row.outlet || "",
+      invoiceValue: row.invoice_value == null ? null : Number(row.invoice_value),
       consent: row.consent,
       createdAt: row.created_at,
       bills: (row.bills || []).map(mapBill),
@@ -117,26 +126,42 @@ async function listWinners(query) {
   const submissions = phones.length
     ? await WinterCampaignSubmission.findAll({
         where: { phone: phones },
-        attributes: ["phone", "email"],
+        attributes: ["phone", "email", "outlet", "invoice_value", "address", "created_at"],
+        include: [
+          {
+            model: WinterCampaignBill,
+            as: "bills",
+            attributes: ["id", "original_name", "mime_type", "size_bytes", "kind"],
+          },
+        ],
       })
     : [];
-  const emailByPhone = new Map(submissions.map((row) => [row.phone, row.email]));
+  const submissionByPhone = new Map(submissions.map((row) => [row.phone, row]));
 
   return {
     page,
     limit,
     total: count,
     totalPage: Math.max(Math.ceil(count / limit), 1),
-    records: rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      email: emailByPhone.get(row.phone) || "",
-      phone: row.phone,
-      prizeCode: row.prize_code,
-      prizeLabel: row.prize_label,
-      weekKey: row.week_key,
-      spunAt: row.spun_at,
-    })),
+    records: rows.map((row) => {
+      const submission = submissionByPhone.get(row.phone);
+      return {
+        id: row.id,
+        name: row.name,
+        email: submission?.email || "",
+        phone: row.phone,
+        outlet: submission?.outlet || "",
+        invoiceValue: submission?.invoice_value == null ? null : Number(submission.invoice_value),
+        address: submission?.address || "",
+        createdAt: submission?.created_at || null,
+        bills: (submission?.bills || []).map(mapBill),
+        prizeCode: row.prize_code,
+        prizeLabel: prizeLabelFor(row),
+        prize: { prizeLabel: prizeLabelFor(row), isWin: true },
+        weekKey: row.week_key,
+        spunAt: row.spun_at,
+      };
+    }),
   };
 }
 
@@ -168,8 +193,8 @@ function sheetFrom(headers, rows) {
 
 async function buildExport(query) {
   const submissions = await WinterCampaignSubmission.findAll({
-    where: searchWhere(query.search, ["name", "email", "phone"]),
-    include: [{ model: WinterCampaignBill, as: "bills", attributes: ["original_name"] }],
+    where: searchWhere(query.search, ["name", "email", "phone", "outlet"]),
+    include: [{ model: WinterCampaignBill, as: "bills", attributes: ["original_name", "kind"] }],
     order: [["created_at", "DESC"]],
   });
   const phones = submissions.map((row) => row.phone);
@@ -184,10 +209,19 @@ async function buildExport(query) {
       Name: row.name,
       Email: row.email,
       Phone: exportPhone(row.phone),
+      Address: row.address || "",
+      Outlet: row.outlet || "",
+      "Invoice value": row.invoice_value == null ? "" : Number(row.invoice_value),
       Submitted: formatExportWhen(row.created_at),
-      Prize: prize ? prize.prize_label : "Not spun",
+      Prize: prize ? prizeLabelFor(prize) : "Not spun",
       Winner: prize?.is_win ? "Yes" : "No",
       Bills: (row.bills || [])
+        .filter((bill) => bill.kind !== "boarding_pass")
+        .map((bill) => bill.original_name)
+        .filter(Boolean)
+        .join(", "),
+      "Boarding pass": (row.bills || [])
+        .filter((bill) => bill.kind === "boarding_pass")
         .map((bill) => bill.original_name)
         .filter(Boolean)
         .join(", "),
@@ -213,7 +247,7 @@ async function buildExport(query) {
     Name: row.name,
     Email: emailByPhone.get(row.phone) || "",
     Phone: exportPhone(row.phone),
-    Prize: row.prize_label,
+    Prize: prizeLabelFor(row),
     Week: row.week_key,
     Won: formatExportWhen(row.spun_at),
   }));
@@ -221,7 +255,10 @@ async function buildExport(query) {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(
     workbook,
-    sheetFrom(["Name", "Email", "Phone", "Submitted", "Prize", "Winner", "Bills"], entryRows),
+    sheetFrom(
+      ["Name", "Email", "Phone", "Address", "Outlet", "Invoice value", "Submitted", "Prize", "Winner", "Bills", "Boarding pass"],
+      entryRows
+    ),
     "Entries"
   );
   XLSX.utils.book_append_sheet(

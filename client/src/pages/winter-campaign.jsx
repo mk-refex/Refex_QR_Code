@@ -8,7 +8,7 @@ export default function WinterCampaignPage() {
   return (
     <>
       <Helmet>
-        <title> Refex Winter Campaign </title>
+        <title> Refex Winter Carnival </title>
       </Helmet>
 
       <WinterCampaignView />

@@ -1,4 +1,4 @@
-export const OPTIONAL_PAGES = [{ id: 'campaign', label: 'Winter Campaign' }];
+export const OPTIONAL_PAGES = [{ id: 'campaign', label: 'Winter Carnival' }];
 
 export function parsePageAccess(value) {
   if (Array.isArray(value)) return value.map((item) => String(item));
@@ -25,6 +25,6 @@ export function hasPageAccess(user, page) {
 export function pageAccessLabels(user) {
   if (user?.role === 'Admin' || user?.role === 'SuperAdmin') return 'All pages';
   const labels = ['QR Code'];
-  if (hasPageAccess(user, 'campaign')) labels.push('Winter Campaign');
+  if (hasPageAccess(user, 'campaign')) labels.push('Winter Carnival');
   return labels.join(', ');
 }

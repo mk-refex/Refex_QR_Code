@@ -51,6 +51,13 @@ function formatPhone(value) {
   return digits || '—';
 }
 
+function formatInvoice(value) {
+  if (value == null || value === '') return '—';
+  const amount = Number(value);
+  if (Number.isNaN(amount)) return '—';
+  return `₹${amount.toLocaleString('en-IN')}`;
+}
+
 function billFileName(bill) {
   const name = String(bill?.originalName || 'bill').replace(/[\\/:*?"<>|]/g, '_').trim();
   return name.slice(0, 180) || 'bill';
@@ -59,7 +66,15 @@ function billFileName(bill) {
 function IconAction({ title, icon, color = 'default', onClick }) {
   return (
     <Tooltip title={title}>
-      <IconButton size="small" color={color} aria-label={title} onClick={onClick}>
+      <IconButton
+        size="small"
+        color={color}
+        aria-label={title}
+        onClick={(event) => {
+          event.stopPropagation();
+          onClick();
+        }}
+      >
         <Iconify icon={icon} width={18} />
       </IconButton>
     </Tooltip>
@@ -73,15 +88,85 @@ IconAction.propTypes = {
   onClick: PropTypes.func.isRequired,
 };
 
-function PrizeChip({ label, isWin }) {
-  if (!label) return 'Not spun';
+function fileKindLabel(bill) {
+  return bill?.kind === 'boarding_pass' ? 'Boarding pass' : 'Invoice';
+}
+
+function formatSize(bytes) {
+  const size = Number(bytes || 0);
+  if (!size) return '';
+  if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function canPreview(type) {
+  return String(type || '').startsWith('image/') || type === 'application/pdf';
+}
+
+function FileLine({ bill, onView, onDownload }) {
+  const kind = fileKindLabel(bill);
   return (
-    <Chip
-      size="small"
-      label={label}
-      color={isWin ? 'success' : 'default'}
-      sx={{ maxWidth: 1, height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal', py: 0.5 } }}
-    />
+    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
+      <Chip size="small" variant="outlined" label={kind} sx={{ flexShrink: 0 }} />
+      <Typography variant="body2" noWrap title={bill.originalName} sx={{ flex: 1, minWidth: 0, maxWidth: 180 }}>
+        {bill.originalName}
+        {formatSize(bill.sizeBytes) ? ` · ${formatSize(bill.sizeBytes)}` : ''}
+      </Typography>
+      <IconAction title={`View ${kind}`} icon="solar:eye-bold" onClick={() => onView(bill)} />
+      <IconAction title={`Download ${kind}`} icon="eva:download-outline" onClick={() => onDownload(bill)} />
+    </Stack>
+  );
+}
+
+FileLine.propTypes = {
+  bill: PropTypes.object.isRequired,
+  onView: PropTypes.func.isRequired,
+  onDownload: PropTypes.func.isRequired,
+};
+
+function DetailField({ label, value }) {
+  return (
+    <Stack spacing={0.25}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2">{value || '—'}</Typography>
+    </Stack>
+  );
+}
+
+DetailField.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.node,
+};
+
+function shortPrize(label) {
+  if (!label) return 'Not spun';
+  if (/better luck/i.test(label)) return 'Better luck';
+  if (/bumper/i.test(label)) return 'Bumper draw';
+  const amount = String(label).match(/₹[\d,]+/);
+  if (amount) return `Gift ${amount[0]}`;
+  return label;
+}
+
+function PrizeChip({ label, isWin }) {
+  const text = shortPrize(label);
+  return (
+    <Tooltip title={label || 'Not spun'}>
+      <Chip
+        size="small"
+        label={text}
+        color={isWin ? 'success' : 'default'}
+        variant={isWin ? 'filled' : 'outlined'}
+        sx={{ maxWidth: 128, '& .MuiChip-label': { px: 1 } }}
+      />
+    </Tooltip>
+  );
+}
+
+function billsOfKind(bills, kind) {
+  return (bills || []).filter((bill) =>
+    kind === 'boarding_pass' ? bill.kind === 'boarding_pass' : bill.kind !== 'boarding_pass'
   );
 }
 
@@ -107,6 +192,9 @@ export default function WinterCampaignReview() {
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [detailRow, setDetailRow] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -127,20 +215,61 @@ export default function WinterCampaignReview() {
     load();
   }, [load]);
 
-  const fetchBill = async (bill) => {
-    const res = await axios.get(`/api/winter-campaign/bills/${bill.id}`, { responseType: 'blob' });
-    return res.data;
+  const readBlobError = async (err, fallback) => {
+    const data = err.response?.data;
+    if (data instanceof Blob) {
+      try {
+        const json = JSON.parse(await data.text());
+        return json.message || fallback;
+      } catch (parseError) {
+        return fallback;
+      }
+    }
+    return data?.message || fallback;
   };
 
-  const openBill = async (bill) => {
+  const fetchBill = async (bill) => {
+    const res = await axios.get(`/api/winter-campaign/bills/${bill.id}`, { responseType: 'blob' });
+    const type = res.headers['content-type'] || bill.mimeType || 'application/octet-stream';
+    return new Blob([res.data], { type });
+  };
+
+  const closePreview = () => {
+    setPreview((current) => {
+      if (current?.url) URL.revokeObjectURL(current.url);
+      return null;
+    });
+  };
+
+  const closeDetail = () => {
+    closePreview();
+    setDetailRow(null);
+  };
+
+  const showPreview = async (bill) => {
+    setPreviewLoading(true);
+    setError('');
     try {
       const file = await fetchBill(bill);
       const url = URL.createObjectURL(file);
-      window.open(url, '_blank', 'noopener');
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setPreview((current) => {
+        if (current?.url) URL.revokeObjectURL(current.url);
+        return { url, type: file.type, name: bill.originalName, id: bill.id };
+      });
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to open the bill.');
+      setError(await readBlobError(err, 'Unable to open the file.'));
+    } finally {
+      setPreviewLoading(false);
     }
+  };
+
+  const openDetail = (row, bill) => {
+    setDetailRow(row);
+    setPreview((current) => {
+      if (current?.url) URL.revokeObjectURL(current.url);
+      return null;
+    });
+    if (bill) showPreview(bill);
   };
 
   const downloadBill = async (bill) => {
@@ -155,7 +284,7 @@ export default function WinterCampaignReview() {
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to download the bill.');
+      setError(await readBlobError(err, 'Unable to download the file.'));
     }
   };
 
@@ -205,7 +334,7 @@ export default function WinterCampaignReview() {
       const url = URL.createObjectURL(res.data);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'winter-campaign.xlsx';
+      link.download = 'winter-carnival.xlsx';
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -227,11 +356,10 @@ export default function WinterCampaignReview() {
       <Stack spacing={2.5}>
         <Stack spacing={0.5}>
           <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-            Winter Campaign
+            Refex Winter Carnival
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Submitted customer details, purchase bills, and winners.
-            {canManage ? ' Admins can edit or remove records.' : ' This role can view records.'}
+            9 Nov 2026 – 15 Jan 2027. Select a row for the full entry and files.
           </Typography>
         </Stack>
 
@@ -311,7 +439,7 @@ export default function WinterCampaignReview() {
                 ? records.map((row, index) => (
                     <Box key={row.id}>
                       {index > 0 ? <Divider /> : null}
-                      <Stack spacing={1} sx={{ p: 1.5 }}>
+                      <Stack spacing={1} sx={{ p: 1.5, cursor: 'pointer' }} onClick={() => openDetail(row)}>
                         <Stack direction="row" spacing={1} alignItems="flex-start">
                           <Box sx={{ minWidth: 0, flex: 1 }}>
                             <Typography variant="subtitle2" noWrap>
@@ -321,6 +449,10 @@ export default function WinterCampaignReview() {
                               {row.email}
                             </Typography>
                             <Typography variant="body2">{formatPhone(row.phone)}</Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                              {row.outlet || '—'}
+                              {` · ${formatInvoice(row.invoiceValue)}`}
+                            </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {formatWhen(row.createdAt)}
                             </Typography>
@@ -338,17 +470,6 @@ export default function WinterCampaignReview() {
                           ) : null}
                         </Stack>
                         <PrizeChip label={row.prize?.prizeLabel} isWin={row.prize?.isWin} />
-                        <Stack spacing={0.5}>
-                          {(row.bills || []).map((bill) => (
-                            <Stack key={bill.id} direction="row" spacing={0.25} alignItems="center" sx={{ minWidth: 0 }}>
-                              <Typography variant="body2" noWrap title={bill.originalName} sx={{ flex: 1, minWidth: 0 }}>
-                                {bill.originalName}
-                              </Typography>
-                              <IconAction title="View bill" icon="solar:eye-bold" onClick={() => openBill(bill)} />
-                              <IconAction title="Download bill" icon="eva:download-outline" onClick={() => downloadBill(bill)} />
-                            </Stack>
-                          ))}
-                        </Stack>
                       </Stack>
                     </Box>
                   ))
@@ -357,7 +478,7 @@ export default function WinterCampaignReview() {
                 ? records.map((row, index) => (
                     <Box key={row.id}>
                       {index > 0 ? <Divider /> : null}
-                      <Stack spacing={1} sx={{ p: 1.5 }}>
+                      <Stack spacing={1} sx={{ p: 1.5, cursor: 'pointer' }} onClick={() => openDetail(row)}>
                         <Stack direction="row" spacing={1} alignItems="flex-start">
                           <Box sx={{ minWidth: 0, flex: 1 }}>
                             <Typography variant="subtitle2" noWrap>
@@ -367,6 +488,10 @@ export default function WinterCampaignReview() {
                               {row.email || '—'}
                             </Typography>
                             <Typography variant="body2">{formatPhone(row.phone)}</Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                              {row.outlet || '—'}
+                              {` · ${formatInvoice(row.invoiceValue)}`}
+                            </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {formatWhen(row.spunAt)}
                             </Typography>
@@ -387,60 +512,68 @@ export default function WinterCampaignReview() {
                 : null}
             </Box>
           ) : (
-            <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size="small" sx={{ minWidth: 820 }}>
+            <TableContainer>
+              <Table
+                size="small"
+                sx={{
+                  '& .MuiTableCell-root': { py: 1, px: 1.5, borderColor: 'divider' },
+                  '& .MuiTableCell-head': {
+                    py: 1.25,
+                    color: 'text.secondary',
+                    fontWeight: 700,
+                    whiteSpace: 'nowrap',
+                  },
+                }}
+              >
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
-                    <TableCell>Email</TableCell>
                     <TableCell>Phone</TableCell>
-                    {tab === 'entries' ? <TableCell>Submitted</TableCell> : <TableCell>Prize</TableCell>}
-                    {tab === 'entries' ? <TableCell>Prize</TableCell> : <TableCell>Won</TableCell>}
-                    {tab === 'entries' ? <TableCell>Bills</TableCell> : null}
+                    <TableCell>Outlet</TableCell>
+                    <TableCell>Invoice value</TableCell>
+                    <TableCell>Prize</TableCell>
+                    <TableCell>{tab === 'entries' ? 'Submitted' : 'Won'}</TableCell>
                     {canManage ? <TableCell align="right">Actions</TableCell> : null}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                      <TableCell colSpan={canManage ? 7 : 6} align="center" sx={{ py: 6 }}>
                         <CircularProgress size={28} />
                       </TableCell>
                     </TableRow>
                   ) : null}
                   {!loading && records.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                      <TableCell colSpan={canManage ? 7 : 6} align="center" sx={{ py: 6 }}>
                         No records found.
                       </TableCell>
                     </TableRow>
                   ) : null}
                   {!loading && tab === 'entries'
                     ? records.map((row) => (
-                        <TableRow key={row.id} hover>
-                          <TableCell>{row.name}</TableCell>
-                          <TableCell sx={{ whiteSpace: 'nowrap' }}>{row.email}</TableCell>
+                        <TableRow key={row.id} hover sx={{ cursor: 'pointer' }} onClick={() => openDetail(row)}>
+                          <TableCell sx={{ maxWidth: 280 }}>
+                            <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+                              {row.name}
+                            </Typography>
+                            <Typography variant="caption" noWrap color="text.secondary" sx={{ display: 'block' }}>
+                              {row.email || '—'}
+                            </Typography>
+                          </TableCell>
                           <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatPhone(row.phone)}</TableCell>
-                          <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatWhen(row.createdAt)}</TableCell>
+                          <TableCell sx={{ maxWidth: 220 }} title={row.outlet || ''}>
+                            <Typography variant="body2" noWrap>
+                              {row.outlet || '—'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatInvoice(row.invoiceValue)}</TableCell>
                           <TableCell>
                             <PrizeChip label={row.prize?.prizeLabel} isWin={row.prize?.isWin} />
                           </TableCell>
-                          <TableCell>
-                            <Stack spacing={0.5} alignItems="flex-start">
-                              {(row.bills || []).map((bill) => (
-                                <Stack key={bill.id} direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
-                                  <Typography variant="body2" noWrap title={bill.originalName} sx={{ maxWidth: 180 }}>
-                                    {bill.originalName}
-                                  </Typography>
-                                  <IconAction title="View bill" icon="solar:eye-bold" onClick={() => openBill(bill)} />
-                                  <IconAction
-                                    title="Download bill"
-                                    icon="eva:download-outline"
-                                    onClick={() => downloadBill(bill)}
-                                  />
-                                </Stack>
-                              ))}
-                            </Stack>
+                          <TableCell sx={{ whiteSpace: 'nowrap', color: 'text.secondary' }}>
+                            {formatWhen(row.createdAt)}
                           </TableCell>
                           {canManage ? (
                             <TableCell align="right">
@@ -460,12 +593,28 @@ export default function WinterCampaignReview() {
                     : null}
                   {!loading && tab === 'winners'
                     ? records.map((row) => (
-                        <TableRow key={row.id} hover>
-                          <TableCell>{row.name}</TableCell>
-                          <TableCell sx={{ whiteSpace: 'nowrap' }}>{row.email || '—'}</TableCell>
+                        <TableRow key={row.id} hover sx={{ cursor: 'pointer' }} onClick={() => openDetail(row)}>
+                          <TableCell sx={{ maxWidth: 280 }}>
+                            <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+                              {row.name}
+                            </Typography>
+                            <Typography variant="caption" noWrap color="text.secondary" sx={{ display: 'block' }}>
+                              {row.email || '—'}
+                            </Typography>
+                          </TableCell>
                           <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatPhone(row.phone)}</TableCell>
-                          <TableCell>{row.prizeLabel}</TableCell>
-                          <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatWhen(row.spunAt)}</TableCell>
+                          <TableCell sx={{ maxWidth: 220 }} title={row.outlet || ''}>
+                            <Typography variant="body2" noWrap>
+                              {row.outlet || '—'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatInvoice(row.invoiceValue)}</TableCell>
+                          <TableCell>
+                            <PrizeChip label={row.prizeLabel} isWin />
+                          </TableCell>
+                          <TableCell sx={{ whiteSpace: 'nowrap', color: 'text.secondary' }}>
+                            {formatWhen(row.spunAt)}
+                          </TableCell>
                           {canManage ? (
                             <TableCell align="right">
                               <IconAction
@@ -503,6 +652,115 @@ export default function WinterCampaignReview() {
           />
         </Stack>
       </Stack>
+
+      <Dialog open={Boolean(detailRow)} onClose={closeDetail} fullScreen={isMobile} fullWidth maxWidth="md">
+        <DialogTitle>{detailRow?.name || 'Entry'}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 0.5 }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                gap: 2,
+              }}
+            >
+              <DetailField label="Email" value={detailRow?.email} />
+              <DetailField label="Phone" value={formatPhone(detailRow?.phone)} />
+              <DetailField label="Outlet" value={detailRow?.outlet} />
+              <DetailField
+                label="Invoice value"
+                value={
+                  detailRow?.invoiceValue != null
+                    ? `₹${Number(detailRow.invoiceValue).toLocaleString('en-IN')}`
+                    : ''
+                }
+              />
+              <DetailField label="Submitted" value={formatWhen(detailRow?.createdAt)} />
+              <DetailField label="Prize" value={detailRow?.prize?.prizeLabel || detailRow?.prizeLabel || 'Not spun'} />
+              {detailRow?.spunAt ? <DetailField label="Won" value={formatWhen(detailRow.spunAt)} /> : null}
+              {detailRow?.address ? <DetailField label="Postal address" value={detailRow.address} /> : null}
+            </Box>
+            <Divider />
+            {['invoice', 'boarding_pass'].map((kind) => {
+              const files = billsOfKind(detailRow?.bills, kind);
+              const title = kind === 'boarding_pass' ? 'Boarding pass' : 'Invoice';
+              return (
+                <Stack key={kind} spacing={1}>
+                  <Typography variant="subtitle2">{title}</Typography>
+                  {files.length ? (
+                    files.map((bill) => (
+                      <FileLine
+                        key={bill.id}
+                        bill={bill}
+                        onView={() => showPreview(bill)}
+                        onDownload={() => downloadBill(bill)}
+                      />
+                    ))
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No {title.toLowerCase()} uploaded.
+                    </Typography>
+                  )}
+                </Stack>
+              );
+            })}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDetail}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(preview) || previewLoading} fullScreen onClose={closePreview}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+          <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
+            {preview?.name || 'File'}
+          </Typography>
+          <IconButton aria-label="Close file" onClick={closePreview}>
+            <Iconify icon="eva:close-fill" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: 'calc(100vh - 72px)',
+            overflow: 'hidden',
+            bgcolor: 'grey.900',
+            p: { xs: 1, sm: 2 },
+          }}
+        >
+          {previewLoading ? <CircularProgress sx={{ color: 'common.white' }} /> : null}
+          {preview && String(preview.type).startsWith('image/') ? (
+            <Box
+              component="img"
+              src={preview.url}
+              alt={preview.name}
+              sx={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+            />
+          ) : null}
+          {preview && preview.type === 'application/pdf' ? (
+            <Box
+              component="iframe"
+              src={preview.url}
+              title={preview.name}
+              sx={{ width: 1, height: 1, border: 0, bgcolor: 'common.white' }}
+            />
+          ) : null}
+          {preview && !canPreview(preview.type) ? (
+            <Stack spacing={2} alignItems="center">
+              <Typography sx={{ color: 'common.white' }}>
+                This file cannot be previewed here. Download it to open it.
+              </Typography>
+              <Button variant="contained" onClick={() => downloadBill({ id: preview.id, originalName: preview.name })}>
+                Download
+              </Button>
+            </Stack>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(editRow)} onClose={() => setEditRow(null)} fullScreen={isMobile} fullWidth maxWidth="sm">
         <DialogTitle>Edit entry</DialogTitle>

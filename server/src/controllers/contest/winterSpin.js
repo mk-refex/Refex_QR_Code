@@ -101,12 +101,19 @@ module.exports = {
 
   register: async (req, res) => {
     try {
+      const uploaded = req.files || {};
+      const bills = Array.isArray(uploaded) ? uploaded : uploaded.bills || [];
+      const boardingPass = Array.isArray(uploaded) ? [] : uploaded.boardingPass || [];
       const result = await winterCampaignService.registerSubmission({
         name: req.body.name || "",
         email: req.body.email || "",
         phone: req.body.phone || req.body.mobile || "",
         consent: req.body.consent,
-        files: req.files || [],
+        address: req.body.address || "",
+        outlet: req.body.outlet || "",
+        invoiceValue: req.body.invoiceValue || "",
+        files: bills,
+        boardingPass,
         ip: clientIp(req),
         userAgent: req.headers["user-agent"],
         captchaToken: req.body.captchaToken || "",
@@ -123,7 +130,7 @@ module.exports = {
 
       return status.ResponseStatus(res, 200, result.message, {
         alreadyRegistered: result.alreadyRegistered,
-        spinPath: "/winter-spin",
+        spinPath: "/winter-carnival/spin",
       });
     } catch (error) {
       console.error("Winter campaign register error:", error);

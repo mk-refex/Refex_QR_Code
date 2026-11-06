@@ -37,36 +37,36 @@ const PRIZES = [
   },
   {
     code: "win_2000",
-    label: "Win up to ₹2,000",
-    shortLabel: "Win up to ₹2,000",
+    label: "Gift worth up to ₹2,000",
+    shortLabel: "Gift up to ₹2,000",
     isWin: true,
     weeklyCap: 2,
   },
   {
     code: "win_5000",
-    label: "Win up to ₹5,000",
-    shortLabel: "Win up to ₹5,000",
+    label: "Gift worth up to ₹5,000",
+    shortLabel: "Gift up to ₹5,000",
     isWin: true,
     weeklyCap: 2,
   },
   {
     code: "win_7000",
-    label: "Win up to ₹7,000",
-    shortLabel: "Win up to ₹7,000",
+    label: "Gift worth up to ₹7,000",
+    shortLabel: "Gift up to ₹7,000",
     isWin: true,
     weeklyCap: 1,
   },
   {
     code: "win_10000",
-    label: "Win up to ₹10,000",
-    shortLabel: "Win up to ₹10,000",
+    label: "Gift worth up to ₹10,000",
+    shortLabel: "Gift up to ₹10,000",
     isWin: true,
     weeklyCap: 1,
   },
   {
     code: "bumper",
-    label: "Eligible for Bumper Prize through Lucky Draw",
-    shortLabel: "Bumper Prize Lucky Draw",
+    label: "Eligible for Bumper Gift through Lucky Draw",
+    shortLabel: "Bumper Gift Lucky Draw",
     isWin: true,
     weeklyCap: null,
   },
@@ -75,7 +75,7 @@ const PRIZES = [
 const PRIZE_BY_CODE = Object.fromEntries(PRIZES.map((p) => [p.code, p]));
 
 const CAMPAIGN_END = process.env.WINTER_SPIN_END_DATE || "2027-01-15";
-const CAMPAIGN_START = process.env.WINTER_SPIN_START_DATE || "2026-11-01";
+const CAMPAIGN_START = process.env.WINTER_SPIN_START_DATE || "2026-11-09";
 
 /**
  * Opening estimate of spins per day, used only until this week has a real sample.
@@ -126,7 +126,7 @@ function getIstDateString(date = new Date()) {
 
 function isCampaignActive(date = new Date()) {
   const today = getIstDateString(date);
-  return today >= CAMPAIGN_START && today <= CAMPAIGN_END;
+  return today <= CAMPAIGN_END;
 }
 
 function normalizePhone(raw) {
@@ -158,11 +158,16 @@ function normalizeToken(raw) {
   return value.slice(0, 255);
 }
 
+function campaignClosedMessage() {
+  return "The Refex Winter Carnival contest is over.";
+}
+
 function mapEntry(entry) {
   if (!entry) return null;
+  const prize = PRIZE_BY_CODE[entry.prize_code];
   return {
     prizeCode: entry.prize_code,
-    prizeLabel: entry.prize_label,
+    prizeLabel: prize ? prize.label : entry.prize_label,
     isWin: entry.is_win,
     weekKey: entry.week_key,
     spunAt: entry.spun_at,
@@ -403,7 +408,7 @@ function isIssueApiKeyValid(providedKey) {
 }
 
 function buildSpinPath(name, phone, token) {
-  return `/winter-spin?name=${encodeURIComponent(name)}&phone=${encodeURIComponent(
+  return `/winter-carnival/spin?name=${encodeURIComponent(name)}&phone=${encodeURIComponent(
     phone
   )}&token=${encodeURIComponent(token)}`;
 }
@@ -429,7 +434,7 @@ async function mintSpinAccess({ name, phone }) {
     return {
       ok: false,
       status: 403,
-      message: "The Refex Winter Campaign spin has ended.",
+      message: campaignClosedMessage(),
     };
   }
 
@@ -540,6 +545,7 @@ async function getStatus({ phone, name, token }) {
   return {
     ok: true,
     campaignActive,
+    campaignStart: CAMPAIGN_START,
     campaignEnd: CAMPAIGN_END,
     weekKey,
     alreadySpun: Boolean(entry),
@@ -569,7 +575,7 @@ async function spinOnce({ name, phone, token, ip, userAgent }) {
     return {
       ok: false,
       status: 403,
-      message: "The Refex Winter Campaign spin has ended.",
+      message: campaignClosedMessage(),
     };
   }
 

@@ -24,7 +24,7 @@ function buildThankYouHtml(name) {
     </div>
     <h2 style="color:#1a1a1a;margin:0 0 16px 0;font-size:20px;">Thank you for participating</h2>
     <p style="color:#333;margin:0 0 12px 0;line-height:1.5;">Hello ${safeName},</p>
-    <p style="color:#333;margin:0 0 16px 0;line-height:1.5;">Thank you for participating in the Refex Winter Campaign at Pune Airport.</p>
+    <p style="color:#333;margin:0 0 16px 0;line-height:1.5;">Thank you for participating in the Refex Winter Carnival at Pune Airport.</p>
     <p style="color:#9ca3af;margin:24px 0 0 0;font-size:12px;line-height:1.5;text-align:center;">
       Refex Airports Retail
     </p>
@@ -40,7 +40,7 @@ function buildThankYouText(name) {
     "",
     `Hello ${safeName},`,
     "",
-    "Thank you for participating in the Refex Winter Campaign at Pune Airport.",
+    "Thank you for participating in the Refex Winter Carnival at Pune Airport.",
     "",
     "Refex Airports Retail",
   ].join("\n");
@@ -71,7 +71,7 @@ async function sendThankYouOnce(phone) {
 
   const result = await sendMail({
     to: email,
-    subject: "Thank you for participating in the Refex Winter Campaign",
+    subject: "Thank you for participating in the Refex Winter Carnival",
     text: buildThankYouText(submission.name),
     html: buildThankYouHtml(submission.name),
   });

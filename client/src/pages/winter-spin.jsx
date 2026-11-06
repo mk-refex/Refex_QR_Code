@@ -8,7 +8,7 @@ export default function WinterSpinPage() {
   return (
     <>
       <Helmet>
-        <title> Refex Winter Campaign | Spin the Wheel </title>
+        <title> Refex Winter Carnival | Spin the Wheel </title>
       </Helmet>
 
       <WinterSpinView />

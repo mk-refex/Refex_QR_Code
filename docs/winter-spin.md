@@ -10,9 +10,10 @@ Random or guessed `token` values are **rejected**.
 
 | Environment | URL |
 |-------------|-----|
-| Form (local) | `http://localhost:3030/winter-campaign` |
-| Form (airport path) | `/airport/winter_campaign` |
-| Spin (after submit) | `/winter-spin` |
+| Form (local) | `http://localhost:3030/winter-carnival` |
+| Form (airport path) | `/airport/winter_carnival` |
+| Spin (after submit) | `/winter-carnival/spin` |
+| Responses | `/carnival/review` |
 
 ### Query parameters
 
@@ -25,17 +26,17 @@ Random or guessed `token` values are **rejected**.
 **Example (after issue)**
 
 ```
-https://YOUR-DOMAIN/winter-spin
+https://YOUR-DOMAIN/winter-carnival/spin
 ```
 
 ---
 
 ## How it works
 
-1. Customer opens `/winter-campaign` and submits name, email, phone, consent, and 1–5 bill files (10 MB each).
+1. Customer opens `/winter-carnival` (or `/airport/winter_carnival`) and submits the contest form.
 2. `POST /api/winter-campaign/register` stores `winter_campaign_submissions` and files under `server/uploads/winter-campaign/`.
-3. The server mints a token in `winter_spin_tokens` and stores it in an HttpOnly cookie. The browser opens `/winter-spin` with no name, phone, or token in the address bar.
-4. The browser opens `/winter-spin`. Status and spin require that token plus the same name and phone.
+3. The server mints a token in `winter_spin_tokens` and stores it in an HttpOnly cookie. The browser opens `/winter-carnival/spin` with no name, phone, or token in the address bar.
+4. Status and spin read that cookie. Older addresses `/winter-campaign`, `/airport/winter_campaign`, and `/winter-spin` redirect to the carnival paths.
 5. The prize is saved on `winter_spin_entries`. The same email or phone cannot register again; the same phone cannot spin again.
 
 A random `token` returns the 404 page.
@@ -140,7 +141,7 @@ Created via Sequelize `sync()` on server start:
 |------|------|
 | Page | `client/src/pages/winter-spin.jsx` |
 | UI | `client/src/sections/winter-spin/` |
-| Routes | `client/src/routes/sections.jsx` → `/winter-spin`, `/airport/winter_campaign` |
+| Routes | `client/src/routes/sections.jsx` → `/winter-carnival`, `/winter-carnival/spin`, `/airport/winter_carnival` |
 | Service / logic | `server/src/services/winterSpinService.js` |
 | API | `server/src/routes/contest/winterSpin.js` |
 | Models | `server/src/models/contest/winter_spin_*.js` |
@@ -156,7 +157,7 @@ Set on the **server**:
 | `WINTER_SPIN_API_KEY` | _(empty)_ | Only for trusted server-to-server `/issue` calls. The public form does not use it. |
 | `WINTER_SPIN_PUBLIC_BASE_URL` | `CLIENT_URL` or `http://localhost:3030` | Base used when building `spinUrl` |
 | `WINTER_SPIN_TOKEN_TTL_HOURS` | `72` | How long an issued link stays valid |
-| `WINTER_SPIN_START_DATE` | `2026-11-01` | Campaign start (IST date `YYYY-MM-DD`) |
+| `WINTER_SPIN_START_DATE` | `2026-11-09` | Shown on the form. It does not block entries. Entries close after `WINTER_SPIN_END_DATE`. |
 | `WINTER_SPIN_END_DATE` | `2027-01-15` | Campaign end (Pongal window) |
 | `WINTER_SPIN_EST_SPINS_PER_DAY` | `50` | Opening daily estimate used to spread the six cash prizes until the week has its own pace |
 
@@ -168,9 +169,9 @@ Set on the **server**:
 2. Restart the server so Sequelize creates the campaign tables.
 3. Set `WINTER_SPIN_PUBLIC_BASE_URL` to the public site origin.
 4. Test:
-   - Open `/winter-campaign`, submit once, land on the wheel
+   - Open `/winter-carnival`, submit once, land on the wheel
    - Same email or phone again → existing spin, no second entry
-   - Opening `/winter-spin` without the session cookie → 404
+   - Opening `/winter-carnival/spin` without the session cookie → 404
    - Prize is stored in `winter_spin_entries`
 
 ---

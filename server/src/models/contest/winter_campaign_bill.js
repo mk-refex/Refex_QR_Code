@@ -38,6 +38,11 @@ module.exports = (sequelize) => {
         allowNull: false,
         defaultValue: 0,
       },
+      kind: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+        defaultValue: "invoice",
+      },
       created_at: {
         type: DataTypes.DATE,
         allowNull: false,

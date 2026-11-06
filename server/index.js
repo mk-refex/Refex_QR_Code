@@ -160,6 +160,26 @@ sequelize
         });
         console.log("Added winter_campaign_submissions.confirmation_sent_at column");
       }
+      const campaignColumns = [
+        ["address", { type: Sequelize.DataTypes.TEXT, allowNull: true }],
+        ["outlet", { type: Sequelize.DataTypes.STRING(120), allowNull: true }],
+        ["invoice_value", { type: Sequelize.DataTypes.DECIMAL(12, 2), allowNull: true }],
+      ];
+      for (const [name, spec] of campaignColumns) {
+        if (!campaignTable[name]) {
+          await qi.addColumn("winter_campaign_submissions", name, spec);
+          console.log(`Added winter_campaign_submissions.${name} column`);
+        }
+      }
+      const billTable = await qi.describeTable("winter_campaign_bills");
+      if (!billTable.kind) {
+        await qi.addColumn("winter_campaign_bills", "kind", {
+          type: Sequelize.DataTypes.STRING(20),
+          allowNull: false,
+          defaultValue: "invoice",
+        });
+        console.log("Added winter_campaign_bills.kind column");
+      }
     } catch (e) {
       console.warn("Winter campaign schema check skipped:", e.message);
     }

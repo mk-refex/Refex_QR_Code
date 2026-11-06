@@ -23,7 +23,7 @@ export default function UserLayout({ children, navItems }) {
     [
       ...sectionSubNav[SECTIONS.qrCode],
       ...(hasPageAccess(user, 'campaign')
-        ? [{ title: 'Winter Campaign', path: '/campaign/review' }]
+        ? [{ title: 'Winter Carnival', path: '/carnival/review' }]
         : []),
     ];
 

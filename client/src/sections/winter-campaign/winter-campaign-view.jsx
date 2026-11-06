@@ -4,20 +4,20 @@ import { useNavigate } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
+import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
-import MenuItem from '@mui/material/MenuItem';
-import IconButton from '@mui/material/IconButton';
-import Checkbox from '@mui/material/Checkbox';
-import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
-import Accordion from '@mui/material/Accordion';
-import AccordionSummary from '@mui/material/AccordionSummary';
-import AccordionDetails from '@mui/material/AccordionDetails';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import CircularProgress from '@mui/material/CircularProgress';
 import { alpha } from '@mui/material/styles';
+import Checkbox from '@mui/material/Checkbox';
+import MenuItem from '@mui/material/MenuItem';
+import Accordion from '@mui/material/Accordion';
+import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import CircularProgress from '@mui/material/CircularProgress';
+import FormControlLabel from '@mui/material/FormControlLabel';
 
 import Iconify from 'src/components/iconify';
 
@@ -26,34 +26,101 @@ import { BRAND } from '../winter-spin/constants';
 // ----------------------------------------------------------------------
 
 const HOW_TO = [
-  'Make a purchase at any participating Refex retail outlet at Pune Airport.',
-  'Check the applicable offer and qualifying purchase amount at that outlet. Minimum value and eligibility can vary by outlet and brand.',
-  'Fill in your details in this form.',
-  'Upload a clear copy or photo of your purchase bill.',
-  'Submit the form to unlock the Spin-the-Wheel.',
-  'Spin the wheel for a chance to win prizes and receive gifts.',
+  'Make a qualifying purchase at a participating outlet in the Pune Airport retail zone. The amount, including taxes, must meet that outlet’s minimum on a single invoice.',
+  'Scan the campaign QR code on the danglers at the outlet, or on the flex banners across Pune Airport.',
+  'Complete this form with your full name, mobile number, email address, the retail outlet and its location, the invoice value, a clear photograph of the original invoice, and a clear photograph of your boarding pass.',
+  'Accept these terms. Each qualifying invoice can be entered once and receives one spin.',
 ];
 
 const TERMS = [
-  'The campaign is valid from Diwali to Makar Sankranti during the specified campaign period.',
-  'The campaign is open to customers making eligible purchases at participating Refex retail outlets at Pune Airport.',
-  'The minimum purchase value and offer eligibility may vary across outlets and brands. Check the applicable offer at the outlet before participating.',
-  'Customers must submit a valid purchase bill to participate.',
-  'Each participation is subject to verification of the purchase bill by the Refex Airports Retail team.',
-  'Only genuine and valid bills generated during the campaign period will be considered.',
-  'The bill uploaded must be clear and legible and should contain sufficient details for verification.',
-  'The Spin-the-Wheel opportunity is subject to successful submission and verification of the purchase details.',
-  'Prizes and gifts are subject to availability and applicable campaign rules.',
-  'Prizes won through the campaign are non-transferable and cannot be exchanged for cash, unless specifically stated otherwise.',
-  'Refex Airports Retail reserves the right to disqualify any entry in case of duplicate, invalid, fraudulent or manipulated bills or details.',
-  'The decision of Refex Airports Retail regarding eligibility, bill verification, winner selection and prize distribution shall be final.',
-  'Winners may be required to provide additional information or identification for prize collection.',
-  'By submitting this form, you consent to the collection and use of the information provided for administering this campaign and contacting you regarding your participation or prize.',
-  'By participating in the campaign, the customer agrees to abide by the above terms and conditions.',
+  '1. Participation is open only to Indian citizens aged eighteen (18) years and above, with a valid government-issued ID, who are travelling via Pune Airport during the Contest Period. It is not open to foreign nationals, NRIs, OCIs, PIOs, or to employees, agents, or contractors of the Organiser, including their immediate family members. The Organiser may ask for proof of eligibility and may reject entries that do not meet these criteria.',
+  '2. Eligible Persons must make a qualifying purchase at a participating outlet in the Pune Airport retail zone. Each outlet has a minimum purchase threshold, inclusive of taxes, which must be met on a single invoice. The outlets, locations, and minimums are listed on this form (Annexure I). After the purchase, the Participant may scan a campaign QR code on danglers at the outlet or on flex banners across Pune Airport. This form asks for full name, mobile number, email address, outlet and location, invoice value, a clear photograph of the original invoice, and a clear photograph of the boarding pass. Submitting it is explicit consent to participate and to provide personal details to the Organiser. These terms must be accepted with the checkbox. Only this official form is considered. Each qualifying invoice is one entry. Duplicate, forged, or manipulated data, including altered invoices, is invalid and can lead to disqualification.',
+  '3. Each eligible Participant who meets the outlet minimum receives one entry and one spin, whatever the outlet and whatever the amount spent above the minimum. Each entry in a weekly bumper prize draw has an equal chance. The spin can show: (a) Better Luck Next Time; or (b) Eligible for Bumper Gift through Lucky Draw; or (c) a gift worth up to ₹2,000, ₹5,000, ₹7,000, or ₹10,000.',
+  '4. Outcomes (a) and (b) do not award an instant gift. All three outcomes remain eligible for the bumper gift through the lucky draw. A gift-category winner receives the corresponding instant gift from the Organiser, as set out in Annexure II. There are no cash gifts. The store manager contacts the Refex Floor Manager to verify the winning category before the gift is handed over.',
+  '5. Weekly bumper prize lucky draws are conducted at the end of each week. Eligible entries, including Participants who did not spin, are included through a manual chit process. Each valid entry receives a unique entry ID. Eligible IDs for that week are printed on chits and placed in a sealed draw box. The number of chits drawn matches the prizes allocated for that week. Chits are drawn by an independent member of the Organiser’s appointed team and checked against the campaign database. If a chit is invalid or the Participant cannot be reached within seven business days, the Organiser may draw a reserve chit. Winners must provide self-attested copies of government-issued identity and address proof by email or post. Further proof may be required. The winner may need to sign an acceptance and release form. Failure to comply within ten (10) days of notification forfeits the prize, and the Organiser may select another winner.',
+  '6. Prizes are subject to applicable tax deductions. A prize value above INR 10,000 attracts Tax Deducted at Source (TDS) under Section 393(3) of the Income Tax Act, 2025, currently at 30%. The winner pays the applicable TDS before claiming the prize, or authorises the Organiser to deduct the tax from the prize value where applicable. The winner shall cooperate with the Organiser, or any person nominated by it, on the procedure for claiming the prize.',
+  '7. Winners pay tax on “Net winning” by NEFT or RTGS to the Organiser. A TDS certificate is issued. Payment is made to the bank account the Organiser notifies to the Participant.',
+  '8. Prizes are shipped to the postal address the winner provides at the time of notification, and only after verification. If the winner pays the TDS in advance, the prize is shipped only after that tax is paid. The Organiser bears the shipping charges and is not liable for damage or loss in transit.',
+  '9. If the winner does not meet the tax obligation, the Organiser need not deliver the prize and may offer it to another eligible Participant. The Organiser is not liable for a Participant’s personal tax matters.',
+  '10. Prizes are non-transferable, non-negotiable, and cannot be exchanged for cash or any other item. If a prize is unavailable, the Organiser may substitute a prize of equal or lesser value.',
+  '11. This Contest is independent of offers made by outlets at Pune Airport. The Organiser is not liable for a dispute between a Participant and a retail outlet about such an offer.',
+  '12. Personal data, including name, contact details, and invoice information, is collected, processed, and retained by the Organiser and/or its group companies only for entry validation, operating spins, winner selection, prize distribution, legal compliance, and limited post-contest analytics. Data is kept for no more than ninety (90) days after the Contest ends, then deleted or anonymised unless the law requires longer. The Organiser does not share, sell, or disclose personal data without consent, except as required by law. Promotional consent can be withdrawn by writing to puneoperations@refex.co.in.',
+  '13. The Organiser is not responsible for technical failures, server outages, incomplete submissions, or human errors. Attempts to tamper with the Contest, including bots or automated entries, can lead to permanent disqualification and legal action. The Organiser is not liable for indirect or consequential loss, including loss of chance, from participation or from being unable to win or claim a prize.',
+  '14. The Organiser, its associates, and group companies are not liable for loss, expense, damage, personal injury, or death in connection with this Contest or a prize, except for liability that cannot be excluded by law. Overall liability will not exceed the actual value of the highest prize announced.',
+  '15. The Organiser and its employees, representatives, directors, agents, affiliates, group companies, and promoters are not liable for incorrect information, unauthorised interference, technical or human error in administration or processing, or injury or damage from participation or from receipt, use, or misuse of a prize.',
+  '16. In a force majeure event, including natural disasters, strikes, epidemics, regulatory restrictions, or any other event beyond the Organiser’s reasonable control, the Contest may be suspended, postponed, modified, or cancelled without notice. Amendments to these terms are binding once published.',
+  '17. If any part of the Contest cannot run as planned, including because of a virus, network failure, bugs, tampering, fraud, or technical failure, the Organiser may cancel, terminate, modify, or suspend the Contest, or invalidate affected entries.',
+  '18. The Organiser is not responsible for the warranty or guarantee of a prize. Winners must claim that from the manufacturer, service provider, or dealer, and must pay for any extended warranty. Winners release the Organiser from prize warranty obligations.',
+  '19. By participating, each person confirms that they have read and agree to these terms. Winners consent to use of their name, likeness, and city of residence for promotion, including social media, press, and follow-up content, without further payment. The Organiser’s decisions on eligibility, selection, and disqualification are final.',
+  '20. Instant gifts and weekly bumper prizes are in Annexure II. The Organiser may amend, substitute, or withdraw a prize without prior notice. Prizes cannot be transferred, refunded, or exchanged for cash or credit. Tax is borne by the Participant and must be paid before the prize is claimed.',
+  '21. Images, if any, are for representation only. Colour, size, and specifications may differ and can change without notice. Brand names and trademarks belong to their owners.',
+  '22. Participants and winners must not speak to the press or other media, or give interviews or comments about the Contest, without the Organiser’s prior written approval. They must not make negative or defamatory statements about the Contest, the Organiser, the prizes, sponsors, retail companies, or their associates, employees, or officers.',
+  '23. The Organiser and the Authority are not liable for loss, damage, delay, personal injury, disappointment, or other harm from participation in the Refex Winter Carnival, including interruption, modification, cancellation, or technical failure. Participants waive claims against the Organiser, the Authority, and their officers, employees, agents, and affiliates in relation to the Contest, the prizes, or the promotion.',
+  '24. These terms are governed by the laws of India. Disputes are subject to the exclusive jurisdiction of the courts at Chennai, Tamil Nadu.',
+  '25. These terms continue after the Contest Period ends.',
+  '26. For clarifications or support, contact the Organiser at puneoperations@refex.co.in.',
+  'Annexure II. Instant gifts: gifts worth up to ₹2,000, ₹5,000, ₹7,000, or ₹10,000. Weekly bumper prizes: gold or silver coins with indicative values of ₹41,000, ₹21,000, or ₹11,000.',
 ];
 
 const CONSENT_TEXT =
-  'I hereby provide my consent to share my personal details for participation in the Refex Winter Carnival campaign and agree to abide by the campaign’s Terms & Conditions, including the eligibility criteria and prize redemption guidelines.';
+  'I accept these Terms & Conditions and give my explicit consent to participate in the Refex Winter Carnival and to provide my personal details to the Organiser.';
+
+const OUTLETS = [
+  ['Magic Casa', 'Arrival', 1000],
+  ['Opium', 'Arrival', 1000],
+  ['Relay', 'Arrival', 500],
+  ['Bombay Shaving Company', 'Bus gate lounge area', 1000],
+  ['Tribe Amrapali', 'Bus gate lounge area', 5000],
+  ['Crossword', 'Check In', 500],
+  ['Accessorize London', 'Domestic security hold area', 1000],
+  ['Beauty Luxe', 'Domestic security hold area', 5000],
+  ['Bombay Shaving Company', 'Domestic security hold area', 1000],
+  ['Craft India', 'Domestic security hold area', 1000],
+  ['Crossword', 'Domestic security hold area', 500],
+  ['Crossword Premium Stationery', 'Domestic security hold area', 1000],
+  ['Da Milano', 'Domestic security hold area', 5000],
+  ['Daily Object', 'Domestic security hold area', 1000],
+  ['Embark', 'Domestic security hold area', 1000],
+  ['Fabindia', 'Domestic security hold area', 2000],
+  ['Forest Essentials', 'Domestic security hold area', 2000],
+  ['Gadget Studio', 'Domestic security hold area', 1000],
+  ['Hidesign', 'Domestic security hold area', 5000],
+  ['Hush Puppies', 'Domestic security hold area', 2000],
+  ['Kalamandir', 'Domestic security hold area', 20000],
+  ['Kashmir Heritage', 'Domestic security hold area', 2000],
+  ['LAVIE & LAVIE SPORTS', 'Domestic security hold area', 2000],
+  ['MacV', 'Domestic security hold area', 2000],
+  ['Madame', 'Domestic security hold area', 2000],
+  ['Makaibari', 'Domestic security hold area', 500],
+  ['Make Your Own Perfume', 'Domestic security hold area', 1000],
+  ['Miniso', 'Domestic security hold area', 500],
+  ['Mufti', 'Domestic security hold area', 2000],
+  ['Opium Sunglass Lounge', 'Domestic security hold area', 2000],
+  ['Pavers England', 'Domestic security hold area', 5000],
+  ['Porsche Design', 'Domestic security hold area', 20000],
+  ['Puma', 'Domestic security hold area', 2000],
+  ['Rare Planet', 'Domestic security hold area', 1000],
+  ['Relay', 'Domestic security hold area', 500],
+  ['Renee Cosmetics', 'Domestic security hold area', 500],
+  ['Samsonite', 'Domestic security hold area', 5000],
+  ['Shahenaz Home Shop', 'Domestic security hold area', 2000],
+  ['Smilen', 'Domestic security hold area', 500],
+  ['Socks Xpress', 'Domestic security hold area', 500],
+  ['Sunglass Hut', 'Domestic security hold area', 20000],
+  ['Swarovski', 'Domestic security hold area', 20000],
+  ['Sweet Dreams', 'Domestic security hold area', 2000],
+  ['Tantra', 'Domestic security hold area', 1000],
+  ['Tiramisu', 'Domestic security hold area', 2000],
+  ['Tribe Amrapali', 'Domestic security hold area', 5000],
+  ['United Colors of Benetton', 'Domestic security hold area', 2000],
+  ['Zoot', 'Domestic security hold area', 1000],
+  ['Accessorize London', 'International SHA', 2000],
+].map(([brand, location, minimum]) => ({
+  brand,
+  location,
+  minimum,
+  label: `${brand} · ${location}`,
+}));
 
 const COUNTRIES = [
   { iso: 'IN', name: 'India', dial: '91', min: 10, max: 10 },
@@ -146,6 +213,26 @@ function phoneError(country, raw) {
   return '';
 }
 
+function fileTypeError(file, label) {
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  if (!BILL_EXTENSIONS.has(ext)) return `${label} must be a JPG, PNG, WEBP, HEIC, or PDF.`;
+  if (!file.size) return `${label} file is empty.`;
+  if (file.size > 10 * 1024 * 1024) return `${label} must be 10 MB or smaller.`;
+  return '';
+}
+
+function invoiceError(outletLabel, raw) {
+  const outlet = OUTLETS.find((item) => item.label === outletLabel);
+  if (!outlet) return 'Select the outlet and location on your invoice.';
+  const value = Number(String(raw || '').replace(/,/g, '').trim());
+  if (!Number.isFinite(value) || value <= 0) return 'Enter the invoice value in rupees.';
+  if (value < outlet.minimum) {
+    return `This outlet needs an invoice of at least ₹${outlet.minimum.toLocaleString('en-IN')}.`;
+  }
+  if (value > 10000000) return 'Enter the invoice value shown on the bill.';
+  return '';
+}
+
 function billsError(list) {
   if (!list.length) return 'Upload at least one bill.';
   if (list.length > 5) return 'You can upload up to 5 files.';
@@ -166,7 +253,10 @@ export default function WinterCampaignView() {
   const [country, setCountry] = useState(COUNTRIES[0]);
   const [phone, setPhone] = useState('');
   const [consent, setConsent] = useState(false);
+  const [outlet, setOutlet] = useState('');
+  const [invoiceValue, setInvoiceValue] = useState('');
   const [files, setFiles] = useState([]);
+  const [boardingPass, setBoardingPass] = useState(null);
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -225,17 +315,30 @@ export default function WinterCampaignView() {
     event.target.value = '';
   };
 
+  const onPickBoardingPass = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    const message = fileTypeError(file, 'The boarding pass');
+    setBoardingPass(message ? null : file);
+    setErrors((prev) => ({ ...prev, boardingPass: message }));
+  };
+
   const validate = () => {
     const next = {};
     const nameMessage = nameError(name);
     const emailMessage = emailError(email);
     const phoneMessage = phoneError(country, phone);
     const billMessage = billsError(files);
+    const invoiceMessage = invoiceError(outlet, invoiceValue);
+    const passMessage = boardingPass ? fileTypeError(boardingPass, 'The boarding pass') : 'Upload a photo or PDF of your boarding pass.';
     if (nameMessage) next.name = nameMessage;
     if (emailMessage) next.email = emailMessage;
     if (phoneMessage) next.phone = phoneMessage;
+    if (invoiceMessage) next.invoice = invoiceMessage;
     if (!consent) next.consent = 'Please agree to the terms to continue.';
     if (billMessage) next.bills = billMessage;
+    if (passMessage) next.boardingPass = passMessage;
     if (!captchaAnswer.trim()) next.captcha = 'Enter the security code.';
     else if (!captcha?.token) next.captcha = 'Refresh the security code and try again.';
     setErrors(next);
@@ -251,10 +354,13 @@ export default function WinterCampaignView() {
     body.append('name', name.trim().replace(/\s+/g, ' '));
     body.append('email', email.trim());
     body.append('phone', `${country.dial}${nationalNumber(phone)}`);
+    body.append('outlet', outlet);
+    body.append('invoiceValue', String(invoiceValue).replace(/,/g, '').trim());
     body.append('consent', 'true');
     body.append('captchaToken', captcha?.token || '');
     body.append('captchaAnswer', captchaAnswer.trim());
     files.forEach((file) => body.append('bills', file));
+    if (boardingPass) body.append('boardingPass', boardingPass);
 
     try {
       setLoading(true);
@@ -265,7 +371,7 @@ export default function WinterCampaignView() {
         loadCaptcha();
         return;
       }
-      navigate('/winter-spin');
+      navigate('/winter-carnival/spin');
     } catch (err) {
       setLoading(false);
       setFormError(err.response?.data?.message || 'Unable to submit right now. Please try again.');
@@ -300,15 +406,23 @@ export default function WinterCampaignView() {
 
         <Stack spacing={1.25}>
           <Typography variant="h3" sx={{ fontWeight: 800, lineHeight: 1.15, fontSize: { xs: '1.7rem', md: '2.4rem' } }}>
-            Refex Winter Campaign
+            Refex Winter Carnival
           </Typography>
           <Typography variant="h6" sx={{ color: BRAND.gold, fontWeight: 700 }}>
-            Shop now and win prizes
+            Shop & Win Contest at Pune International Airport
           </Typography>
-          <Typography sx={{ color: alpha('#fff', 0.82), maxWidth: 760 }}>
-            Celebrate the festive season with Refex Airports Retail, Pune Airport. From Diwali to Makar
-            Sankranti, customers making eligible purchases at participating Refex retail outlets can join
-            the Spin-the-Wheel and get a chance to win prizes and receive gifts.
+          <Typography variant="body2" sx={{ color: alpha('#fff', 0.82), maxWidth: 760 }}>
+            Contest Period: 9th November 2026 – 15th January 2027.
+          </Typography>
+          <Typography variant="body2" sx={{ color: alpha('#fff', 0.82), maxWidth: 760 }}>
+            Organised by Refex Airports Retail Private Limited, having its Registered Office at Second Floor,
+            Refex Towers, Sterling Road Signal, 313, Valluvar Kottam High Road, Nungambakkam, Chennai – 600034,
+            Tamil Nadu, the Master Concessionaire, Pune Airport.
+          </Typography>
+          <Typography variant="body2" sx={{ color: alpha('#fff', 0.82), maxWidth: 760 }}>
+            The Refex Winter Carnival rewards passengers who shop at select retail outlets at Pune Airport
+            during the Contest Period. Participation is acceptance of the terms below. A qualifying purchase
+            on a single invoice gives one entry and one spin.
           </Typography>
         </Stack>
 
@@ -342,11 +456,16 @@ export default function WinterCampaignView() {
 
         <Card sx={{ bgcolor: alpha(BRAND.orange, 0.12), color: '#fff', border: `1px solid ${alpha(BRAND.orange, 0.28)}` }}>
           <Stack spacing={1} sx={{ p: { xs: 2, sm: 3 } }}>
-            <Typography variant="h6">Weekly and bumper prizes</Typography>
+            <Typography variant="h6">Instant gifts and weekly bumper prizes</Typography>
             <Typography variant="body2" sx={{ color: alpha('#fff', 0.88) }}>
-              In addition to instant Spin-the-Wheel rewards, weekly prizes and bumper prizes up to ₹75,000
-              are part of the Refex Winter Campaign. Gift vouchers and prizes are sponsored by participating
-              brand partners, along with prizes contributed by Refex Airports Retail.
+              The wheel can show Better Luck Next Time, Eligible for Bumper Gift through Lucky Draw, or a
+              gift worth up to ₹2,000, ₹5,000, ₹7,000, or ₹10,000. The first two do not include an instant
+              gift. All three remain eligible for the weekly bumper lucky draw.
+            </Typography>
+            <Typography variant="body2" sx={{ color: alpha('#fff', 0.88) }}>
+              Weekly bumper prizes are gold or silver coins with indicative values of ₹41,000, ₹21,000, or
+              ₹11,000. There are no cash gifts. An instant gift is handed over only after the store manager
+              confirms the winning category with the Refex Floor Manager.
             </Typography>
           </Stack>
         </Card>
@@ -364,16 +483,16 @@ export default function WinterCampaignView() {
             <Typography fontWeight={700}>Terms and conditions</Typography>
           </AccordionSummary>
           <AccordionDetails>
-            <Stack component="ul" spacing={1} sx={{ m: 0, pl: 2.25 }}>
+            <Stack spacing={1.25}>
               {TERMS.map((item) => (
-                <Typography key={item} component="li" variant="body2" sx={{ color: alpha('#fff', 0.82) }}>
+                <Typography key={item} variant="body2" sx={{ color: alpha('#fff', 0.82) }}>
                   {item}
                 </Typography>
               ))}
             </Stack>
             <Typography variant="caption" sx={{ display: 'block', mt: 2, color: alpha('#fff', 0.65) }}>
-              All offers, rewards, purchase requirements and campaign benefits are subject to change without
-              prior notice and may apply only to select merchandise or specific participating brands and outlets.
+              The Organiser may amend these terms, and may substitute or withdraw a prize, once the change is
+              published. Images, if any, are for representation only.
             </Typography>
           </AccordionDetails>
         </Accordion>
@@ -491,10 +610,57 @@ export default function WinterCampaignView() {
               />
             </Stack>
 
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              <TextField
+                select
+                required
+                fullWidth
+                label="Outlet and location"
+                value={outlet}
+                disabled={loading}
+                error={Boolean(errors.invoice) && !outlet}
+                onChange={(e) => {
+                  setOutlet(e.target.value);
+                  setErrors((prev) => ({
+                    ...prev,
+                    invoice: invoiceValue ? invoiceError(e.target.value, invoiceValue) : '',
+                  }));
+                }}
+                SelectProps={{
+                  MenuProps: {
+                    PaperProps: { sx: { bgcolor: '#0E2438', color: '#fff', maxHeight: 320 } },
+                  },
+                }}
+                sx={fieldSx}
+              >
+                {OUTLETS.map((item) => (
+                  <MenuItem key={item.label} value={item.label} sx={{ color: '#fff', whiteSpace: 'normal' }}>
+                    {item.brand} — {item.location} (min ₹{item.minimum.toLocaleString('en-IN')})
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                required
+                label="Invoice value (₹)"
+                value={invoiceValue}
+                disabled={loading}
+                placeholder="22000"
+                inputProps={{ inputMode: 'decimal' }}
+                error={Boolean(errors.invoice)}
+                helperText={errors.invoice || 'Amount on a single invoice, including taxes.'}
+                onBlur={() => setErrors((prev) => ({ ...prev, invoice: invoiceError(outlet, invoiceValue) }))}
+                onChange={(e) => {
+                  setInvoiceValue(e.target.value.replace(/[^\d.]/g, ''));
+                  setErrors((prev) => ({ ...prev, invoice: '' }));
+                }}
+                sx={{ ...fieldSx, width: { xs: 1, sm: 220 }, flexShrink: 0 }}
+              />
+            </Stack>
+
             <Stack spacing={1}>
-              <Typography variant="subtitle2">Bill *</Typography>
+              <Typography variant="subtitle2">Invoice *</Typography>
               <Typography variant="caption" sx={{ color: alpha('#fff', 0.65) }}>
-                Upload up to 5 files. Max 10 MB per file. JPG, PNG, WEBP, HEIC, or PDF.
+                Clear photo of the original invoice. Up to 5 files. Max 10 MB each. JPG, PNG, WEBP, HEIC, or PDF.
               </Typography>
               <Button
                 variant="outlined"
@@ -523,6 +689,37 @@ export default function WinterCampaignView() {
               {errors.bills ? (
                 <Typography variant="caption" sx={{ color: '#FFB4A8' }}>
                   {errors.bills}
+                </Typography>
+              ) : null}
+            </Stack>
+
+            <Stack spacing={1}>
+              <Typography variant="subtitle2">Boarding pass *</Typography>
+              <Typography variant="caption" sx={{ color: alpha('#fff', 0.65) }}>
+                One clear photo or PDF. Max 10 MB.
+              </Typography>
+              <Button
+                variant="outlined"
+                component="label"
+                disabled={loading}
+                sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' }, color: '#fff', borderColor: alpha('#fff', 0.3) }}
+              >
+                {boardingPass ? 'Replace file' : 'Add boarding pass'}
+                <input hidden type="file" accept="image/*,.pdf,.heic,.heif" onChange={onPickBoardingPass} />
+              </Button>
+              {boardingPass ? (
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" noWrap sx={{ flex: 1, minWidth: 0 }}>
+                    {boardingPass.name}
+                  </Typography>
+                  <Button size="small" color="inherit" sx={{ flexShrink: 0 }} onClick={() => setBoardingPass(null)}>
+                    Remove
+                  </Button>
+                </Stack>
+              ) : null}
+              {errors.boardingPass ? (
+                <Typography variant="caption" sx={{ color: '#FFB4A8' }}>
+                  {errors.boardingPass}
                 </Typography>
               ) : null}
             </Stack>

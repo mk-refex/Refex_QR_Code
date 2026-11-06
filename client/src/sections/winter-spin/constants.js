@@ -11,8 +11,8 @@ export const BRAND = {
   white: '#FFFFFF',
 };
 
-export const CAMPAIGN_TITLE = 'Refex Winter Campaign';
-export const CAMPAIGN_TAGLINE = 'Spin the Wheel · Win Winter Rewards';
+export const CAMPAIGN_TITLE = 'Refex Winter Carnival';
+export const CAMPAIGN_TAGLINE = 'Shop & Win Contest at Pune International Airport';
 
 /** Segment order must match server prize codes for landing animation. */
 export const WHEEL_SEGMENTS = [
@@ -27,16 +27,16 @@ export const WHEEL_SEGMENTS = [
   },
   {
     code: 'win_2000',
-    label: 'Win up to\n₹2,000',
+    label: 'Gift up to\n₹2,000',
     color: BRAND.blue,
     textColor: '#FFFFFF',
-    icon: 'solar:wad-of-money-bold-duotone',
-    emoji: '💵',
-    badge: 'Cash reward',
+    icon: 'solar:gift-bold-duotone',
+    emoji: '🎁',
+    badge: 'Instant gift',
   },
   {
     code: 'bumper',
-    label: 'Bumper Prize\nLucky Draw',
+    label: 'Bumper Gift\nLucky Draw',
     color: BRAND.orange,
     textColor: '#FFFFFF',
     icon: 'solar:cup-star-bold-duotone',
@@ -45,30 +45,30 @@ export const WHEEL_SEGMENTS = [
   },
   {
     code: 'win_5000',
-    label: 'Win up to\n₹5,000',
+    label: 'Gift up to\n₹5,000',
     color: '#0E7490',
     textColor: '#FFFFFF',
-    icon: 'solar:wallet-money-bold-duotone',
-    emoji: '💰',
-    badge: 'Cash reward',
+    icon: 'solar:gift-bold-duotone',
+    emoji: '🎁',
+    badge: 'Instant gift',
   },
   {
     code: 'win_7000',
-    label: 'Win up to\n₹7,000',
+    label: 'Gift up to\n₹7,000',
     color: '#B45309',
     textColor: '#FFFFFF',
-    icon: 'solar:dollar-minimalistic-bold-duotone',
-    emoji: '💎',
-    badge: 'Cash reward',
+    icon: 'solar:gift-bold-duotone',
+    emoji: '🎁',
+    badge: 'Instant gift',
   },
   {
     code: 'win_10000',
-    label: 'Win up to\n₹10,000',
+    label: 'Gift up to\n₹10,000',
     color: '#7C2D12',
     textColor: '#FFFFFF',
-    icon: 'solar:crown-star-bold-duotone',
-    emoji: '👑',
-    badge: 'Top cash',
+    icon: 'solar:gift-bold-duotone',
+    emoji: '🎁',
+    badge: 'Instant gift',
   },
 ];
 

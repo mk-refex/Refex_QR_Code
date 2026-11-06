@@ -147,17 +147,17 @@ export default function PrizeResult({ entry, alreadySpun }) {
       <Stack spacing={0.75} sx={{ mt: { xs: 2, sm: 2.5 }, color: alpha('#fff', 0.8), maxWidth: 340, px: 1 }}>
         {isCashWin && (
           <Typography variant="caption" sx={{ lineHeight: 1.5 }}>
-            Our team will contact you to verify and claim your reward.
+            This is an instant gift, not cash. The store manager confirms it with the Refex Floor Manager before handover.
           </Typography>
         )}
         {isBumper && (
           <Typography variant="caption" sx={{ lineHeight: 1.5 }}>
-            You are eligible for the Bumper Prize Lucky Draw. Stay tuned!
+            You are eligible for the bumper gift through the lucky draw. This spin does not include an instant gift.
           </Typography>
         )}
         {isBetterLuck && (
           <Typography variant="caption" sx={{ lineHeight: 1.5 }}>
-            Thank you for joining Refex Winter Campaign.
+            Thank you for joining the Refex Winter Carnival. This spin does not include an instant gift, and you remain eligible for the weekly bumper lucky draw.
           </Typography>
         )}
       </Stack>
